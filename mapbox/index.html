@@ -103,7 +103,7 @@
 
 <div id="city-switch-menu">
 
-    <button type="button" class="btn btn-primary" id="colormap-switch-button" onclick="switchColorMap()">Switch to ciaa_visits_exp</button>
+    <button type="button" class="btn btn-primary" id="colormap-switch-button" onclick="switchColorMap()">Switch to Nearby Charging Visits</button>
 
 
     <p class="switch-menu-title">Select Metropolitan</p>
@@ -194,7 +194,7 @@
             map.setPaintProperty(light_layerId, property, ['get', 'ciaa_visits_exp_hex']);
             map.setPaintProperty('regions-polygon-fill', property, ['get', 'ciaa_visits_exp_hex']);
             var button=document.querySelector('#colormap-switch-button');
-            button.innerText = 'Switch to ciaa_gravity_exp';
+            button.innerText = 'Switch to Nearby Charging Gravity Accessibility';
             button.classList.remove('btn-primary');
             button.classList.add('btn-success');
         }
@@ -203,7 +203,7 @@
             map.setPaintProperty(light_layerId, property, ['get', 'ciaa_gravity_exp_hex']);
             map.setPaintProperty('regions-polygon-fill', property, ['get', 'ciaa_gravity_exp_hex']);
             var button=document.querySelector('#colormap-switch-button');
-            button.innerText = 'Switch to ciaa_visits_exp_hex';
+            button.innerText = 'Switch to Nearby Charging Visits';
             button.classList.remove('btn-success');
             button.classList.add('btn-primary');
         }
