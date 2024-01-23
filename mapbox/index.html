@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>United States Charging Stations</title>
+    <link rel="icon" type="image/x-icon"
+          href="https://hogazme.github.io/mapbox/marker-icons/ev-station-100x100.ico">
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
+    <link href="https://hogazme.github.io/mapbox/resources/bootstrap/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="https://hogazme.github.io/mapbox/resources/bootstrap/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        #map .odd_row {
+            background-color: #ADD8E6;
+        }
+
+        #map .even_row {
+            background-color: #ffffff;
+        }
+
+        #map td {
+            font-size: 15px;
+            font-family: "Helvetica Neue", serif;
+        }
+
+        .mapboxgl-popup {
+            max-width: 500px !important;
+            width: auto;
+            overflow-x: hidden;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #city-switch-menu {
+            position: absolute;
+            background-color: white;
+            padding: 2px;
+            width: 200px;
+            max-height: calc(100% - 50px);
+            overflow-y: scroll;
+        }
+
+
+        #city-switch-menu {
+            background-color: #f4f4f4;
+            padding: 5px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #city-switch-menu p {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        input[type="radio"] {
+            display: none;
+        }
+
+        label {
+            display: inline-block;
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: #fff;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        input[type="radio"]:checked + label {
+            background-color: #ff0000;
+        }
+
+
+
+
+    </style>
+</head>
+<body>
+
+
+<div id="map"></div>
+
+<div id="city-switch-menu">
+
+    <button type="button" class="btn btn-primary" id="colormap-switch-button" onclick="switchColorMap()">Switch to ciaa_visits_exp</button>
+
+
+    <p class="switch-menu-title">Select Metropolitan</p>
+
+    <input id="Albany--Schenectady-radio" type="radio" name="rtoggle" value="Albany--Schenectady-radio">
+    <label for="Albany--Schenectady-radio">Albany--Schenectady</label>
+
+    <input id="Atlanta-radio" type="radio" name="rtoggle" value="Atlanta-radio">
+    <label for="Atlanta-radio">Atlanta</label>
+
+    <input id="Austin-radio" type="radio" name="rtoggle" value="Austin-radio">
+    <label for="Austin-radio">Austin</label>
+
+    <input id="Baltimore-radio" type="radio" name="rtoggle" value="Baltimore-radio">
+    <label for="Baltimore-radio">Baltimore</label>
+
+    <input id="Boston-radio" type="radio" name="rtoggle" value="Boston-radio">
+    <label for="Boston-radio">Boston</label>
+
+    <input id="Chicago-radio" type="radio" name="rtoggle" value="Chicago-radio">
+    <label for="Chicago-radio">Chicago</label>
+
+    <input id="Dallas-radio" type="radio" name="rtoggle" value="Dallas-radio">
+    <label for="Dallas-radio">Dallas</label>
+
+    <input id="Denver-radio" type="radio" name="rtoggle" value="Denver-radio">
+    <label for="Denver-radio">Denver</label>
+
+    <input id="Kansas-radio" type="radio" name="rtoggle" value="Kansas-radio">
+    <label for="Kansas-radio">Kansas</label>
+
+    <input id="Los Angeles--Long Beach--Anaheim-radio" type="radio" name="rtoggle"
+           value="Los Angeles--Long Beach--Anaheim-radio">
+    <label for="Los Angeles--Long Beach--Anaheim-radio">Los Angeles--Long Beach--Anaheim</label>
+
+
+    <input id="Miami-radio" type="radio" name="rtoggle" value="Miami-radio">
+    <label for="Miami-radio">Miami</label>
+
+
+    <input id="New York--Jersey City--Newark-radio" type="radio" name="rtoggle"
+           value="New York--Jersey City--Newark-radio">
+    <label for="New York--Jersey City--Newark-radio">New York--Jersey City--Newark</label>
+
+
+    <input id="Philadelphia-radio" type="radio" name="rtoggle" value="Philadelphia-radio">
+    <label for="Philadelphia-radio">Philadelphia</label>
+
+
+    <input id="Phoenix-radio" type="radio" name="rtoggle" value="Phoenix-radio" checked="checked">
+    <label for="Phoenix-radio">Phoenix</label>
+
+
+    <input id="Sacramento-radio" type="radio" name="rtoggle" value="Sacramento-radio">
+    <label for="Sacramento-radio">Sacramento</label>
+
+    <input id="San Diego-radio" type="radio" name="rtoggle" value="San Diego-radio">
+    <label for="San Diego-radio">San Diego</label>
+
+    <input id="San Francisco--Oakland-radio" type="radio" name="rtoggle" value="San Francisco--Oakland-radio">
+    <label for="San Francisco--Oakland-radio">San Francisco--Oakland</label>
+
+    <input id="San Jose-radio" type="radio" name="rtoggle" value="San Jose-radio">
+    <label for="San Jose-radio">San Jose</label>
+
+    <input id="Seattle--Tacoma-radio" type="radio" name="rtoggle" value="Seattle--Tacoma-radio">
+    <label for="Seattle--Tacoma-radio">Seattle--Tacoma</label>
+
+    <input id="Washington--Arlington-radio" type="radio" name="rtoggle" value="Washington--Arlington-radio">
+    <label for="Washington--Arlington-radio">Washington--Arlington</label>
+
+</div>
+
+
+
+
+<script>
+    function switchColorMap(){
+        const light_layerId = 'regions-polygon-fill-light';
+        const property = 'fill-color';
+
+        const currentFillColor = map.getPaintProperty(light_layerId, property);
+
+        console.log('Current fill color:', currentFillColor);
+
+        if(currentFillColor[1]==='ciaa_gravity_exp_hex') {
+            console.log('switch to ciaa_visits_exp_hex')
+            map.setPaintProperty(light_layerId, property, ['get', 'ciaa_visits_exp_hex']);
+            map.setPaintProperty('regions-polygon-fill', property, ['get', 'ciaa_visits_exp_hex']);
+            var button=document.querySelector('#colormap-switch-button');
+            button.innerText = 'Switch to ciaa_gravity_exp';
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-success');
+        }
+        else if(currentFillColor[1]==='ciaa_visits_exp_hex') {
+            console.log('switch to ciaa_gravity_exp_hex')
+            map.setPaintProperty(light_layerId, property, ['get', 'ciaa_gravity_exp_hex']);
+            map.setPaintProperty('regions-polygon-fill', property, ['get', 'ciaa_gravity_exp_hex']);
+            var button=document.querySelector('#colormap-switch-button');
+            button.innerText = 'Switch to ciaa_visits_exp_hex';
+            button.classList.remove('btn-success');
+            button.classList.add('btn-primary');
+        }
+
+    }
+
+    function jsonToHtmlTable(json) {
+        var html = '<table border="1" style="background-color:white">';
+        var row_index = 0
+        for (var key in json) {
+
+            if (json.hasOwnProperty(key)) {
+                if (row_index % 2 === 0) {
+                    html += '<tr class="even_row"><td>' + key + '</td><td>' + json[key] + '</td></tr>';
+                } else {
+                    html += '<tr class="odd_row"><td>' + key + '</td><td>' + json[key] + '</td></tr>';
+                }
+                row_index += 1
+            }
+        }
+        html += '</table>';
+        return html;
+    }
+
+
+    mapboxgl.accessToken = 'pk.eyJ1Ijoiamtvbmc0IiwiYSI6ImNscmptajRzeTAwY2wyam1ob3RzdGQ2aHMifQ.-HErIUQB8ORZ89bcvWB_OQ';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [-112, 33.5],
+        zoom: 9,
+        minZoom: 4.2,
+        maxBounds: [[-128.36203391661184, 25.50780992848615], // Southwest coordinates
+            [-62.279625905325794, 50.05329432546409]] // Northeast coordinates
+    });
+
+    map.addControl(new mapboxgl.NavigationControl());
+
+    map.on('load', () => {
+        // default: load some large circle buttons (don't load geojson at this time)
+        init_area('https://hogazme.github.io/mapbox/geojson/points/Phoenix.geojson.json',
+            'https://hogazme.github.io/mapbox/geojson/polygon-v2/Phoenix.geojson.json');
+
+        add_city_landmarks();
+    });
+
+    function add_city_landmarks() {
+        // Add an image to use as a custom marker
+        map.loadImage(
+            'https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png',
+            (error, image) => {
+                if (error) throw error;
+                map.addImage('custom-marker', image);
+// Add a GeoJSON source with 2 points
+                map.addSource('points', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'FeatureCollection',
+                        'features': [
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-73.79689, 42.73824]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-84.348285, 33.851599]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-97.74863, 30.357106]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-76.610539, 39.291785]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-71.041557, 42.349249]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-87.903563, 42.056564]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-97.037218, 32.855139]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-104.9428473830505, 39.74843249079493]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-94.559919, 39.107265]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-118.188596, 33.977786]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-80.163148, 26.204872]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-74.0309118, 40.8227429]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-75.011984, 39.939502]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-112, 33.5]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-121.427045, 38.599693]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-117.243, 32.89947]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-122.4152, 37.80619]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-122.022783, 37.359362]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-122.193162, 47.614744]
+                                }
+                            },
+                            {
+                                'type': 'Feature',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-77.122192, 38.809675]
+                                }
+                            }
+                        ]
+                    }
+                });
+
+// Add a symbol layer
+                map.addLayer({
+                    'id': 'large-city-points',
+                    'type': 'symbol',
+                    'source': 'points',
+                    'layout': {
+                        'icon-image': 'custom-marker',
+// get the title name from the source's "title" property
+                        'text-field': ['get', 'title'],
+                        'text-font': [
+                            'Open Sans Semibold',
+                            'Arial Unicode MS Bold'
+                        ],
+                        'text-offset': [0, 1.25],
+                        'text-anchor': 'top',
+                        'icon-allow-overlap': true,
+                    },
+                    'maxzoom': 9 // corresponding to Points-Layer's minzoom
+                });
+            }
+        );
+    }
+
+    function init_area(places_geojson_url, polygon_geojson_url) {
+        map.addSource('places', {
+            // This GeoJSON contains features that include an "icon"
+            // property. The value of the "icon" property corresponds
+            // to an image in the Mapbox Streets style's sprite.
+            'type': 'geojson',
+            'data': places_geojson_url
+
+        });
+        map.addSource('regions-polygon', {
+            // This GeoJSON contains features that include an "icon"
+            // property. The value of the "icon" property corresponds
+            // to an image in the Mapbox Streets style's sprite.
+            'type': 'geojson',
+            'data': polygon_geojson_url
+        });
+
+
+        // Add a layer showing the places.
+        map.loadImage('https://hogazme.github.io/mapbox/marker-icons/ev-station-100x100.png', function (error, image) {
+            if (error) throw error;
+
+            // Add the loaded image as an icon
+            map.addImage('blue-marker-icon', image);
+
+            map.addLayer({
+                'id': 'places',
+                'type': 'symbol',
+                'source': 'places',
+                'layout': {
+                    'icon-image': 'blue-marker-icon',
+                    'icon-allow-overlap': true,
+                    'icon-size': 0.2,
+                },
+                'minzoom': 9
+            });
+            // Add a new layer to visualize the polygon.
+            map.addLayer({
+                'id': 'regions-polygon-fill',
+                'type': 'fill',
+                'source': 'regions-polygon', // reference the data source
+                'layout': {},
+                'paint': {
+                    'fill-color': ['get', 'ciaa_gravity_exp_hex'],
+                    'fill-opacity': 0.5
+                },
+                'maxzoom': 9,
+                'minzoom': 6
+            });
+            // Add a polygon layer with more transparent and no border lines
+            map.addLayer({
+                'id': 'regions-polygon-fill-light',
+                'type': 'fill',
+                'source': 'regions-polygon', // reference the data source
+                'layout': {},
+                'paint': {
+                    'fill-color': ['get', 'ciaa_gravity_exp_hex'],
+                    'fill-opacity': 0.5
+                },
+                'minzoom': 9
+            });
+            // polygon outline
+            map.addLayer({
+                'id': 'regions-polygon-outline',
+                'type': 'line',
+                'source': 'regions-polygon',
+                'layout': {},
+                'paint': {
+                    'line-color': '#000',
+                    'line-width': 1
+                },
+                'maxzoom': 9,
+                'minzoom': 6
+            });
+        });
+
+        // When a click event occurs on a feature in the places layer, open a popup at the
+        // location of the feature, with description HTML from its properties.
+        map.on('click', 'places', (e) => {
+            // Copy coordinates array.
+            const coordinates = e.features[0].geometry.coordinates.slice();
+            const description = e.features[0].properties;
+
+            // Ensure that if the map is zoomed out such that multiple
+            // copies of the feature are visible, the popup appears
+            // over the copy being pointed to.
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+            }
+
+            new mapboxgl.Popup()
+                .setLngLat(coordinates)
+                .setHTML(jsonToHtmlTable(description))
+                .addTo(map);
+        });
+
+        map.on('click', 'regions-polygon-fill', (e) => {
+            // console.log(map.getZoom());
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(jsonToHtmlTable(e.features[0].properties))
+                .addTo(map);
+        });
+
+        // Change the cursor to a pointer when the mouse is over the places layer.
+        map.on('mouseenter', 'places', () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // Change it back to a pointer when it leaves.
+        map.on('mouseleave', 'places', () => {
+            map.getCanvas().style.cursor = '';
+        });
+    }
+
+    function switch_to_city(center_coord, places_geojson_url, polygon_geojson_url) {
+        set_city_data(places_geojson_url, polygon_geojson_url);
+        map.flyTo({
+            center: center_coord,
+            zoom: 10,
+            essential: true // This animation is considered essential with flyTo
+        });
+    }
+
+    function set_city_data(places_geojson_url, polygon_geojson_url) {
+        console.log('requesting ' + places_geojson_url);
+        if (places_geojson_url) map.getSource('places').setData(places_geojson_url);
+        if (polygon_geojson_url) map.getSource('regions-polygon').setData(polygon_geojson_url);
+    }
+
+
+    const cityList = document.getElementById('city-switch-menu');
+    const inputs = cityList.getElementsByTagName('input');
+
+    for (const input of inputs) {
+        input.onclick = (city) => {
+            const geojson_url_prefix = 'https://hogazme.github.io/mapbox/geojson/';
+            const cityName = city.target.id;
+            // console.log(cityName)
+            if (cityName === "Albany--Schenectady-radio") {
+                switch_to_city([-73.79689, 42.73824], geojson_url_prefix + 'points/Albany--Schenectady.geojson.json', geojson_url_prefix + 'polygon-v2/Albany--Schenectady.geojson.json')
+            } else if (cityName === "Atlanta-radio") {
+                switch_to_city([-84.348285, 33.851599], geojson_url_prefix + 'points/Atlanta.geojson.json', geojson_url_prefix + 'polygon-v2/Atlanta.geojson.json');
+            } else if (cityName === "Austin-radio") {
+                switch_to_city([-97.74863, 30.357106], geojson_url_prefix + 'points/Austin.geojson.json', geojson_url_prefix + 'polygon-v2/Austin.geojson.json');
+            } else if (cityName === "Baltimore-radio") {
+                switch_to_city([-76.610539, 39.291785], geojson_url_prefix + 'points/Baltimore.geojson.json', geojson_url_prefix + 'polygon-v2/Baltimore.geojson.json');
+            } else if (cityName === "Boston-radio") {
+                switch_to_city([-71.041557, 42.349249], geojson_url_prefix + 'points/Boston.geojson.json', geojson_url_prefix + 'polygon-v2/Boston.geojson.json');
+            } else if (cityName === "Chicago-radio") {
+                switch_to_city([-87.903563, 42.056564], geojson_url_prefix + 'points/Chicago.geojson.json', geojson_url_prefix + 'polygon-v2/Chicago.geojson.json');
+            } else if (cityName === "Dallas-radio") {
+                switch_to_city([-97.037218, 32.855139], geojson_url_prefix + 'points/Dallas.geojson.json', geojson_url_prefix + 'polygon-v2/Dallas.geojson.json');
+            } else if (cityName === "Denver-radio") {
+                switch_to_city([-104.9428473830505, 39.74843249079493], geojson_url_prefix + 'points/Denver.geojson.json', geojson_url_prefix + 'polygon-v2/Denver.geojson.json');
+            } else if (cityName === "Kansas-radio") {
+                switch_to_city([-94.559919, 39.107265], geojson_url_prefix + 'points/Kansas.geojson.json', geojson_url_prefix + 'polygon-v2/Kansas.geojson.json');
+            } else if (cityName === "Los Angeles--Long Beach--Anaheim-radio") {
+                switch_to_city([-118.188596, 33.977786], geojson_url_prefix + 'points/Los Angeles--Long Beach--Anaheim.geojson.json', geojson_url_prefix + 'polygon-v2/Los Angeles--Long Beach--Anaheim.geojson.json');
+            } else if (cityName === "Miami-radio") {
+                switch_to_city([-80.163148, 26.204872], geojson_url_prefix + 'points/Miami.geojson.json', geojson_url_prefix + 'polygon-v2/Miami.geojson.json');
+            } else if (cityName === "New York--Jersey City--Newark-radio") {
+                switch_to_city([-74.0309118, 40.8227429], geojson_url_prefix + 'points/New York--Jersey City--Newark.geojson.json', geojson_url_prefix + 'polygon-v2/New York--Jersey City--Newark.geojson.json');
+            } else if (cityName === "Philadelphia-radio") {
+                switch_to_city([-75.011984, 39.939502], geojson_url_prefix + 'points/Philadelphia.geojson.json', geojson_url_prefix + 'polygon-v2/Philadelphia.geojson.json');
+            } else if (cityName === "Phoenix-radio") {
+                switch_to_city([-112, 33.5], geojson_url_prefix + 'points/Phoenix.geojson.json', geojson_url_prefix + 'polygon-v2/Phoenix2.geojson.json');
+            } else if (cityName === "Sacramento-radio") {
+                switch_to_city([-121.427045, 38.599693], geojson_url_prefix + 'points/Sacramento.geojson.json', geojson_url_prefix + 'polygon-v2/Sacramento.geojson.json');
+            } else if (cityName === "San Diego-radio") {
+                switch_to_city([-117.243, 32.89947], geojson_url_prefix + 'points/San Diego.geojson.json', geojson_url_prefix + 'polygon-v2/San Diego.geojson.json');
+            } else if (cityName === "San Francisco--Oakland-radio") {
+                switch_to_city([-122.4152, 37.80619], geojson_url_prefix + 'points/San Francisco--Oakland.geojson.json', geojson_url_prefix + 'polygon-v2/San Francisco--Oakland.geojson.json');
+            } else if (cityName === "San Jose-radio") {
+                switch_to_city([-122.022783, 37.359362], geojson_url_prefix + 'points/San Jose.geojson.json', geojson_url_prefix + 'polygon-v2/San Jose.geojson.json');
+            } else if (cityName === "Seattle--Tacoma-radio") {
+                switch_to_city([-122.193162, 47.614744], geojson_url_prefix + 'points/Seattle--Tacoma.geojson.json', geojson_url_prefix + 'polygon-v2/Seattle--Tacoma.geojson.json');
+            } else if (cityName === "Washington--Arlington-radio") {
+                switch_to_city([-77.122192, 38.809675], geojson_url_prefix + 'points/Washington--Arlington.geojson.json', geojson_url_prefix + 'polygon-v2/Washington--Arlington.geojson.json');
+            }
+
+        };
+    }
+
+
+    // Function to update zoom and center information
+    function global_data_listener() {
+        var zoom = map.getZoom();
+        var center = map.getCenter();
+        console.log(zoom)
+        if (zoom <= 6) {
+            // That means a user is zooming out to observe the global united states map
+            // Just give him/her the WHOLE DATA
+            set_city_data('https://hogazme.github.io/mapbox/geojson/points/v1_all_stations_points.geojson.json', 'https://hogazme.github.io/mapbox/geojson/polygon-v2/combo.geojson.json')
+        }
+
+    }
+
+    // // Attach move event listener to the map
+    // map.on('move', updateMapInfo);
+
+    // Update the information every 2500 milliseconds (2.5 second)
+    setInterval(global_data_listener, 2500);
+
+</script>
+
+</body>
+</html>
