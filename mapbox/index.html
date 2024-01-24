@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>United States Charging Stations</title>
+    <title>US Charging Stations</title>
     <link rel="icon" type="image/x-icon"
           href="https://hogazme.github.io/mapbox/marker-icons/ev-station-100x100.ico">
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -22,19 +22,6 @@
             bottom: 0;
             width: calc(100% - 200px);
             left:200px;
-        }
-
-        #map .odd_row {
-            background-color: #ADD8E6;
-        }
-
-        #map .even_row {
-            background-color: #ffffff;
-        }
-
-        #map td {
-            font-size: 15px;
-            font-family: "Helvetica Neue", serif;
         }
 
         .mapboxgl-popup {
@@ -92,6 +79,22 @@
             background-color: #ff0000;
         }
 
+        #popup-table td{
+            border: 1px solid black;
+            text-align: center;
+            font-size: 15px;
+            font-family: "Helvetica Neue", serif;
+        }
+
+        #popup-table .odd_row {
+            background-color: #ADD8E6;
+        }
+
+        #popup-table .even_row {
+            background-color: #ffffff;
+        }
+
+
 
 
 
@@ -104,7 +107,7 @@
 
 <div id="city-switch-menu">
 
-    <button type="button" class="btn btn-primary" id="colormap-switch-button" onclick="switchColorMap()">Switch to Nearby Charging Visits</button>
+    <button type="button" style="margin-bottom:5px;" class="btn btn-primary" id="colormap-switch-button" onclick="switchColorMap()">Switch to Nearby Charging Visits</button>
 
 
     <p class="switch-menu-title">Select Metropolitan</p>
@@ -212,7 +215,7 @@
     }
 
     function jsonToHtmlTable(json) {
-        var html = '<table border="1" style="background-color:white">';
+        var html = '<table border="1" style="background-color:white; border-collapse: collapse;" id="popup-table">';
         var row_index = 0
         for (var key in json) {
 
