@@ -1,0 +1,7 @@
+shp\_reader module
+==================
+
+.. automodule:: shp_reader
+   :members:
+   :undoc-members:
+   :show-inheritance:

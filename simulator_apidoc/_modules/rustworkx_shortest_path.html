@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>rustworkx_shortest_path &mdash; repast4birmingham_sphinx  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            repast4birmingham_sphinx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../VehicleAgent.html">VehicleAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../check_sp_validity.html">check_sp_validity module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../graph.html">graph module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../humanAgent.html">humanAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../my_kd_tree.html">my_kd_tree module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../routing_generator.html">routing_generator module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../run.html">run module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../run_proceeding.html">run_proceeding module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rustworkx_shortest_path.html">rustworkx_shortest_path module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shp_reader.html">shp_reader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../simple_travel_plan.html">simple_travel_plan module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">repast4birmingham_sphinx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">rustworkx_shortest_path</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for rustworkx_shortest_path</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">shp_reader</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">rustworkx</span> <span class="k">as</span> <span class="nn">rx</span>
+
+
+<div class="viewcode-block" id="run">
+<a class="viewcode-back" href="../rustworkx_shortest_path.html#rustworkx_shortest_path.run">[docs]</a>
+<span class="k">def</span> <span class="nf">run</span><span class="p">():</span>
+    <span class="c1"># read the shapefile into the rustworkx graph</span>
+    <span class="c1"># ensure that each edge is added twice, as the directed graph</span>
+    <span class="n">shp_G</span> <span class="o">=</span> <span class="n">shp_reader</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="n">rust_node_n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+    <span class="n">rust_g</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">PyDiGraph</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">)):</span>
+        <span class="n">rust_g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">neighbor_node_id</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">:</span>
+            <span class="n">rust_g</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">node_id</span><span class="p">,</span> <span class="n">neighbor_node_id</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">neighbor_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">edge_length</span><span class="p">)</span>
+            <span class="c1"># rust_g.add_edge(neighbor_node_id, node.node_id, shp_reader.node_distance(node, shp_G.nodes[neighbor_node_id]))</span>
+
+    <span class="c1"># test the node to itself!</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-----begin rustworkx validity test-----&#39;</span><span class="p">)</span>
+    <span class="n">test_node</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+    <span class="c1"># trace to itself, len(path)==1</span>
+    <span class="n">path_mapping</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">digraph_dijkstra_shortest_paths</span><span class="p">(</span><span class="n">rust_g</span><span class="p">,</span> <span class="n">test_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">,</span> <span class="n">test_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">,</span>
+                                                      <span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">))]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[]&#39;</span><span class="p">)</span>
+    <span class="c1"># trace to it&#39;s random neighbor, len(path)==2</span>
+    <span class="n">rand_neighbor_id</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">test_node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="n">path_mapping</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">digraph_dijkstra_shortest_paths</span><span class="p">(</span><span class="n">rust_g</span><span class="p">,</span> <span class="n">test_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">,</span>
+                                                      <span class="n">rand_neighbor_id</span><span class="p">,</span>
+                                                      <span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># debug2 = list(path_mapping[next(iter(path_mapping))])</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">))]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[]&#39;</span><span class="p">)</span>
+    <span class="c1"># len(path) should be 3 or 1, depending on GOD RANDOM</span>
+    <span class="c1"># len=3: trace to random neighbor&#39;s random neighbor</span>
+    <span class="c1"># len=1: trace to itself</span>
+    <span class="n">rand_neighbor_neighbor_id</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">rand_neighbor_id</span><span class="p">]</span><span class="o">.</span><span class="n">next_Nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="n">path_mapping</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">digraph_dijkstra_shortest_paths</span><span class="p">(</span><span class="n">rust_g</span><span class="p">,</span> <span class="n">test_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">,</span> <span class="n">rand_neighbor_neighbor_id</span><span class="p">,</span>
+                                                      <span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">))]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;[]&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;-----end graph validity test-----&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">shp_G</span><span class="p">,</span> <span class="n">rust_g</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, UA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

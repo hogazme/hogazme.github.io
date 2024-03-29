@@ -1,0 +1,13 @@
+.idea
+.DS_Store
+node_modules
+.vscode
+__pycache__
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.pdf
+*.m4a
+*.pkl

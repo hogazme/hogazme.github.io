@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VehicleAgent &mdash; repast4birmingham_sphinx  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            repast4birmingham_sphinx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../VehicleAgent.html">VehicleAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../check_sp_validity.html">check_sp_validity module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../graph.html">graph module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../humanAgent.html">humanAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../my_kd_tree.html">my_kd_tree module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../routing_generator.html">routing_generator module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../run.html">run module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../run_proceeding.html">run_proceeding module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rustworkx_shortest_path.html">rustworkx_shortest_path module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shp_reader.html">shp_reader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../simple_travel_plan.html">simple_travel_plan module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">repast4birmingham_sphinx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">VehicleAgent</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for VehicleAgent</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+
+
+<div class="viewcode-block" id="VehicleAgent">
+<a class="viewcode-back" href="../VehicleAgent.html#VehicleAgent.VehicleAgent">[docs]</a>
+<span class="k">class</span> <span class="nc">VehicleAgent</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    class Agent:</span>
+<span class="sd">    currently the Agent class includes both vehicles and passengers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">agent_id</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_arrived</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_queue_dist</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_queue</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">destination</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">original_speed</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lat</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">long</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edge_id_mutex</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_id_mutex</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">belonging_rank</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loading</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loaded_human</span><span class="o">=</span><span class="kc">None</span>
+
+<div class="viewcode-block" id="VehicleAgent.assign_attributes">
+<a class="viewcode-back" href="../VehicleAgent.html#VehicleAgent.VehicleAgent.assign_attributes">[docs]</a>
+    <span class="k">def</span> <span class="nf">assign_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">agent_id</span><span class="p">,</span> <span class="n">node_id_mutex</span><span class="p">,</span> <span class="n">edge_id_mutex</span><span class="p">,</span> <span class="n">long</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">speed</span><span class="p">,</span> <span class="n">destination</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">routing_queue</span><span class="p">,</span>
+                          <span class="n">routing_queue_dist</span><span class="p">,</span> <span class="n">routing_queue_cross_process_node_id</span><span class="p">,</span> <span class="n">belonging_rank</span><span class="p">,</span> <span class="n">capacity</span><span class="p">,</span> <span class="n">loading</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Due to code design, a vehicle agent&#39;s attributes will be assigned HERE, using this function</span>
+
+<span class="sd">        @param agent_id: the vehicle&#39;s universe ID (rather than process&#39;s local ID)</span>
+<span class="sd">        @param node_id_mutex: the vehicle&#39;s spawn shp_G node id (int)</span>
+<span class="sd">        @param edge_id_mutex: (this value is actually not used)</span>
+<span class="sd">        @param long: the vehicle&#39;s spawn longitude (UTM, float)</span>
+<span class="sd">        @param lat: the vehicle&#39;s spawn latitude (UTM, float)</span>
+<span class="sd">        @param speed: the vehicle&#39;s speed (float)</span>
+<span class="sd">        @param destination:  the vehicle&#39;s destination (shp_G node id, integer)</span>
+<span class="sd">        @param status: the vehicle&#39;s status (integer), currently we use 0 as &quot;idle&quot;, 1 as &quot;more&quot;, 2 as &quot;waiting at the boundary to be transferred)</span>
+<span class="sd">        @param routing_queue: the vehicle&#39;s current shortest path routing queue (list of integers representing shp_G node ids)</span>
+<span class="sd">        @param routing_queue_dist: the vehicle&#39;s current shortest path break-down link length (list of floats representing each link&#39;s length)</span>
+<span class="sd">        @param routing_queue_cross_process_node_id: updated at: 1. init 2. re-partitioning, to decide which node is the decisive boundary node to wait and be transferred</span>
+<span class="sd">        @param belonging_rank: integer, the vehicle&#39;s belonging rank</span>
+<span class="sd">        @return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># mutex variable pair:</span>
+        <span class="c1"># node_id &amp; edge_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">agent_id</span> <span class="o">=</span> <span class="n">agent_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_id_mutex</span> <span class="o">=</span> <span class="n">node_id_mutex</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edge_id_mutex</span> <span class="o">=</span> <span class="n">edge_id_mutex</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">long</span> <span class="o">=</span> <span class="n">long</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lat</span> <span class="o">=</span> <span class="n">lat</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="n">speed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">original_speed</span> <span class="o">=</span> <span class="n">speed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">destination</span> <span class="o">=</span> <span class="n">destination</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">status</span>  <span class="c1"># status: 1: moving towards destination; 0: idle</span>
+        <span class="c1"># navigation</span>
+        <span class="c1"># next routing nodes, using node_id format</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_queue</span> <span class="o">=</span> <span class="n">routing_queue</span>
+        <span class="c1"># next routing nodes&#39; distance(s), strictly corresponding to self.routing_queue</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_queue_dist</span> <span class="o">=</span> <span class="n">routing_queue_dist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="n">routing_queue_cross_process_node_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">belonging_rank</span> <span class="o">=</span> <span class="n">belonging_rank</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span><span class="o">=</span><span class="n">capacity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loading</span><span class="o">=</span><span class="n">loading</span>
+
+        <span class="c1"># these variables do not need outside attributes assign</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_arrived</span> <span class="o">=</span> <span class="p">[</span><span class="n">node_id_mutex</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dist_compensation</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loaded_human</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_served_passenger</span><span class="o">=</span><span class="mi">0</span>
+
+        <span class="c1"># special copy, for debugging only</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug_original_routing_queue</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug_original_spawn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_id_mutex</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug_history_routing_queue_cross_process_node_id_lst</span> <span class="o">=</span> <span class="p">[</span><span class="n">routing_queue_cross_process_node_id</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug_routing_arrived_nodeAgent</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_arrived</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug_belong_rank_history</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">belonging_rank</span><span class="p">]</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="BusAgent">
+<a class="viewcode-back" href="../VehicleAgent.html#VehicleAgent.BusAgent">[docs]</a>
+<span class="k">class</span> <span class="nc">BusAgent</span><span class="p">(</span><span class="n">VehicleAgent</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vehicleAgent_obj</span><span class="p">,</span> <span class="n">capacity</span><span class="p">,</span> <span class="n">loading</span><span class="p">,</span> <span class="n">start_station</span><span class="p">,</span> <span class="n">end_station</span><span class="p">,</span> <span class="n">bus_complete_sp</span><span class="p">,</span> <span class="n">bus_complete_sp_dist</span><span class="p">,</span> <span class="n">bus_stop_route</span><span class="p">,</span>
+                 <span class="n">bus_stop_route_schedule</span><span class="p">,</span> <span class="n">bus_route_naming</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        @param vehicleAgent_obj: the vehicle object reference</span>
+<span class="sd">        @param capacity: integer, the maximum capacity</span>
+<span class="sd">        @param loading:  integer, the bus&#39;s current loaded number of people (including driver)</span>
+<span class="sd">        @param start_station: the bus&#39;s start station (integer, shp_G node id)</span>
+<span class="sd">        @param end_station: the bus&#39;s end station (integer, shp_G node id)</span>
+<span class="sd">        @param bus_complete_sp: the bus&#39;s current shortest path routing queue (list of integers representing shp_G node ids)</span>
+<span class="sd">        @param bus_complete_sp_dist: the bus&#39;s current shortest path break-down link length (list of floats representing each link&#39;s length)</span>
+<span class="sd">        @param bus_stop_route: list of integer shp_G node ids, not necessarily to be continuous</span>
+<span class="sd">        @param bus_stop_route_schedule:  the strict one-to-one mapping for bus_stop_route list. example: [0, 360, 720, 1000] means the bus should arrive node 49 at tick 0</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">copied_vars</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">vehicleAgent_obj</span><span class="p">))</span>
+        <span class="c1"># remove these attributes: generated not using function parameter (instead, generated inside the function)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;routing_arrived&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;dist_compensation&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;original_speed&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;loaded_human&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;total_served_passenger&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;debug_original_routing_queue&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;debug_original_spawn&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;debug_history_routing_queue_cross_process_node_id_lst&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;debug_routing_arrived_nodeAgent&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">copied_vars</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;debug_belong_rank_history&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="c1"># end</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assign_attributes</span><span class="p">(</span><span class="o">**</span><span class="n">copied_vars</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">capacity</span> <span class="o">=</span> <span class="n">capacity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loading</span> <span class="o">=</span> <span class="n">loading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_station</span> <span class="o">=</span> <span class="n">start_station</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_station</span> <span class="o">=</span> <span class="n">end_station</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus_complete_sp</span> <span class="o">=</span> <span class="n">bus_complete_sp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus_complete_sp_dist</span> <span class="o">=</span> <span class="n">bus_complete_sp_dist</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus_stop_route</span> <span class="o">=</span> <span class="n">bus_stop_route</span>  <span class="c1"># the discrete bus stop node id list; pop up the first element as the bus&#39;s &quot;temp destination&quot; until no element exists</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus_stop_route_schedule</span> <span class="o">=</span> <span class="n">bus_stop_route_schedule</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus_route_naming</span><span class="o">=</span><span class="n">bus_route_naming</span>
+        <span class="c1"># dynamic variable, minus 1 for every tick, replenish to 10 once arriving at each bus stop. if this variable equals to 0, we minus 1 again (to -1) and start the bus.</span>
+        <span class="c1"># -1: moving</span>
+        <span class="c1"># 10: arrived at a bus stop</span>
+        <span class="c1"># 0~10: waiting for passengers</span>
+        <span class="c1"># 0: set to -1 and next tick move again</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bus_stop_countdown</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, UA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

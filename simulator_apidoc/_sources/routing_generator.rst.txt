@@ -1,0 +1,7 @@
+routing\_generator module
+=========================
+
+.. automodule:: routing_generator
+   :members:
+   :undoc-members:
+   :show-inheritance:

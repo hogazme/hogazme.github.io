@@ -1,0 +1,31 @@
+.. repast4birmingham_sphinx documentation master file, created by
+   sphinx-quickstart on Fri Mar 29 03:21:24 2024.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to repast4birmingham_sphinx's documentation!
+====================================================
+
+.. toctree::
+   :maxdepth: 4
+   :caption: Contents:
+
+   VehicleAgent
+   check_sp_validity
+   graph
+   humanAgent
+   my_kd_tree
+   routing_generator
+   run
+   run_proceeding
+   rustworkx_shortest_path
+   shp_reader
+   simple_travel_plan
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

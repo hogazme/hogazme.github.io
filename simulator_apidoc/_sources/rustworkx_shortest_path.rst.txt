@@ -1,0 +1,7 @@
+rustworkx\_shortest\_path module
+================================
+
+.. automodule:: rustworkx_shortest_path
+   :members:
+   :undoc-members:
+   :show-inheritance:

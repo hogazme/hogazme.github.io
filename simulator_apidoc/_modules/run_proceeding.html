@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>run_proceeding &mdash; repast4birmingham_sphinx  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            repast4birmingham_sphinx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../VehicleAgent.html">VehicleAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../check_sp_validity.html">check_sp_validity module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../graph.html">graph module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../humanAgent.html">humanAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../my_kd_tree.html">my_kd_tree module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../routing_generator.html">routing_generator module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../run.html">run module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../run_proceeding.html">run_proceeding module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rustworkx_shortest_path.html">rustworkx_shortest_path module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../shp_reader.html">shp_reader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../simple_travel_plan.html">simple_travel_plan module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">repast4birmingham_sphinx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">run_proceeding</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for run_proceeding</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">diff:</span>
+<span class="sd">1. vehicle generator -&gt; pickle load</span>
+<span class="sd">2. logging timestamp: + 360</span>
+<span class="sd">3. skip init function&#39;s self.logging_coordinates()</span>
+<span class="sd">4. some print code changes</span>
+<span class="sd">5. load_lst = []</span>
+<span class="sd">6. Oh, now run_proceeding.py has many different code blocks compared to run.py</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">pyproj</span>
+<span class="kn">import</span> <span class="nn">rustworkx</span>
+<span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+
+<span class="kn">from</span> <span class="nn">repast4py.network</span> <span class="kn">import</span> <span class="n">write_network</span><span class="p">,</span> <span class="n">read_network</span>
+<span class="kn">from</span> <span class="nn">repast4py</span> <span class="kn">import</span> <span class="n">context</span> <span class="k">as</span> <span class="n">ctx</span>
+<span class="kn">from</span> <span class="nn">repast4py</span> <span class="kn">import</span> <span class="n">core</span><span class="p">,</span> <span class="n">schedule</span><span class="p">,</span> <span class="n">logging</span><span class="p">,</span> <span class="n">parameters</span>
+<span class="kn">from</span> <span class="nn">repast4py</span> <span class="kn">import</span> <span class="n">random</span> <span class="k">as</span> <span class="n">repast4random</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">VehicleAgent</span>
+<span class="kn">import</span> <span class="nn">rustworkx_shortest_path</span>
+<span class="kn">import</span> <span class="nn">shp_reader</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">my_kd_tree</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">agent_group</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">shp_G</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">rust_G</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">DEFAULT_LOAD</span> <span class="o">=</span> <span class="mi">500</span>
+<span class="n">utm_longLat</span> <span class="o">=</span> <span class="n">pyproj</span><span class="o">.</span><span class="n">Proj</span><span class="p">(</span><span class="n">proj</span><span class="o">=</span><span class="s1">&#39;utm&#39;</span><span class="p">,</span> <span class="n">zone</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">ellps</span><span class="o">=</span><span class="s1">&#39;WGS84&#39;</span><span class="p">,</span> <span class="n">preserve_units</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">node_agent_mapping</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># key: numeric node id (without rank); value: NodeAgent object reference</span>
+
+<span class="c1"># logging_id = [0 + DEFAULT_LOAD * i for i in range(0, 20)]</span>
+<span class="c1"># logging_id.extend([1 + DEFAULT_LOAD * i for i in range(0, 20)])</span>
+
+<span class="n">logging_id</span> <span class="o">=</span> <span class="p">[</span> <span class="n">DEFAULT_LOAD</span> <span class="o">*</span> <span class="n">i</span> <span class="o">-</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">21</span><span class="p">)]</span>
+<span class="n">logging_id</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">DEFAULT_LOAD</span> <span class="o">*</span> <span class="n">i</span> <span class="o">-</span><span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">21</span><span class="p">)])</span>
+<span class="n">load_lst</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">sys_proceeding_tick</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="NodeAgent">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.NodeAgent">[docs]</a>
+<span class="k">class</span> <span class="nc">NodeAgent</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">Agent</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nid</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">agent_type</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">rank</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Repast4py built-in and default function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">nid</span><span class="p">,</span> <span class="n">agent_type</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span>
+
+<div class="viewcode-block" id="NodeAgent.save">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.NodeAgent.save">[docs]</a>
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Saves the state of this agent as tuple.</span>
+
+<span class="sd">        A non-ghost agent will save its state using this</span>
+<span class="sd">        method, and any ghost agents of this agent will</span>
+<span class="sd">        be updated with that data (self.received_rumor).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The agent&#39;s state</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if model:</span>
+        <span class="c1">#     popped_agent_id = []</span>
+        <span class="c1">#     for agent_id in model.controlled_agent_id:</span>
+        <span class="c1">#         if something/cross rank check agent_group[agent_id].destination != self.uid[0]:</span>
+        <span class="c1">#             popped_agent_id.append(agent_id)</span>
+        <span class="c1">#     return (self.uid, popped_agent_id)</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     return (self.uid, None)</span>
+        <span class="k">if</span> <span class="n">model</span><span class="p">:</span>
+            <span class="n">popped_agent_dict</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                <span class="n">popped_agent_info_lst</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="k">for</span> <span class="n">info</span> <span class="ow">in</span> <span class="n">popped_agent_info_lst</span><span class="p">:</span>
+                    <span class="c1"># build &quot;transferring&quot; dict</span>
+                    <span class="n">agent_id</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">target_rank</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">popped_agent_dict</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">agent_group</span><span class="p">[</span><span class="n">agent_id</span><span class="p">],</span> <span class="n">target_rank</span><span class="p">)</span>
+                    <span class="c1"># print(&#39;At %d, process %d is releasing %s, updated len: %d&#39; % (</span>
+                    <span class="c1">#     model.runner.schedule.tick, model.rank, vars(agent_group[agent_id]),</span>
+                    <span class="c1">#     len(agent_group.keys())))</span>
+
+                <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span> <span class="n">popped_agent_dict</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></div>
+
+
+        <span class="c1"># -----just to test if object can be corrected delivered-----</span>
+        <span class="c1"># test_v = VehicleAgent.VehicleAgent(2500000)</span>
+        <span class="c1"># test_v.assign_attributes(100, None, 120.023, 1202.0203, 8, 40, 1, [1, 2, 3], [10, 20, 102.3])</span>
+        <span class="c1"># popped_agent_dict = {1:test_v}</span>
+        <span class="c1"># return (self.uid, popped_agent_dict)</span>
+
+<div class="viewcode-block" id="NodeAgent.update">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.NodeAgent.update">[docs]</a>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">popped_agent_dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates the state of this agent when it is a ghost</span>
+<span class="sd">        agent on some rank other than its local one.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: the new agent state (received_rumor)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">model</span> <span class="ow">and</span> <span class="n">popped_agent_dict</span><span class="p">:</span>
+            <span class="c1"># print(&#39;At %d, Process %d is receiving vehicle %s&#39; % (</span>
+            <span class="c1">#     model.runner.schedule.tick, model.rank, str(popped_agent_dict[1])))</span>
+            <span class="k">for</span> <span class="n">agent_id</span> <span class="ow">in</span> <span class="n">popped_agent_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="c1"># Example:</span>
+                <span class="c1"># Supposing node A(rank 1) is connected to B(rank 0) and C(rank 2)</span>
+                <span class="c1"># And there&#39;s a vehicle at A, preparing to move to C</span>
+                <span class="c1"># so this checking is important, to ensure that C is receiving this vehicle, rather than B</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="n">popped_agent_dict</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span>
+                <span class="n">target_rank</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">target_rank</span> <span class="o">==</span> <span class="n">model</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+                    <span class="n">agent_group</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">agent_i</span> <span class="o">=</span> <span class="n">agent_group</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">belonging_rank</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">rank</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="c1"># re-assign the cross boundary check</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">cross_boundary_node_id_generator</span><span class="p">(</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">belonging_rank</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                    <span class="c1"># debug only</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">debug_history_routing_queue_cross_process_node_id_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span><span class="p">)</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">debug_belong_rank_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">rank</span><span class="p">)</span></div>
+</div>
+
+                    <span class="c1"># print(&#39;At %d, process %d is receiving %s, updated len: %d&#39; % (</span>
+                    <span class="c1">#     model.runner.schedule.tick, model.rank, vars(info[0]),</span>
+                    <span class="c1">#     len(agent_group.keys())))</span>
+
+
+<div class="viewcode-block" id="create_node_agent">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.create_node_agent">[docs]</a>
+<span class="k">def</span> <span class="nf">create_node_agent</span><span class="p">(</span><span class="n">nid</span><span class="p">,</span> <span class="n">agent_type</span><span class="p">,</span> <span class="n">rank</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Repast4py built-in and default function</span>
+<span class="sd">    create a Node Agent</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">NodeAgent</span><span class="p">(</span><span class="n">nid</span><span class="p">,</span> <span class="n">agent_type</span><span class="p">,</span> <span class="n">rank</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="restore_agent">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.restore_agent">[docs]</a>
+<span class="k">def</span> <span class="nf">restore_agent</span><span class="p">(</span><span class="n">agent_data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Repast4py built-in and default function</span>
+<span class="sd">    restore a Node Agent</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">uid</span> <span class="o">=</span> <span class="n">agent_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">NodeAgent</span><span class="p">(</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">uid</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="Model">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model">[docs]</a>
+<span class="k">class</span> <span class="nc">Model</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comm</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Repast4py built-in and default function</span>
+<span class="sd">        the process&#39;s main entrance, after assigned with process context and runner env</span>
+<span class="sd">        we also use this function to:</span>
+<span class="sd">        1. init running environment</span>
+<span class="sd">        2. init Node Agent environment</span>
+<span class="sd">        3. init vehicle objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">global</span> <span class="n">sys_proceeding_tick</span>
+        <span class="n">sys_proceeding_tick</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;sys_proceeding_tick&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proceeding_round</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;proceeding_round&#39;</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Read sys_proceeding_tick: </span><span class="si">%d</span><span class="s1">, proceeding_round: </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sys_proceeding_tick</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">proceeding_round</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">runner</span> <span class="o">=</span> <span class="n">schedule</span><span class="o">.</span><span class="n">init_schedule_runner</span><span class="p">(</span><span class="n">comm</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">schedule_repeating_event</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+        <span class="c1"># self.runner.schedule_repeating_event(1, 1, self.logging_coordinates)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">schedule_stop</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;stop.at&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">schedule_end_event</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">at_end</span><span class="p">)</span>
+
+        <span class="n">fpath</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;network_file&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">SharedContext</span><span class="p">(</span><span class="n">comm</span><span class="p">)</span>
+        <span class="n">read_network</span><span class="p">(</span><span class="n">fpath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="n">create_node_agent</span><span class="p">,</span> <span class="n">restore_agent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">net</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">get_projection</span><span class="p">(</span><span class="s1">&#39;size_400k&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">=</span> <span class="n">comm</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">controlled_agent_id</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">net_nodes_lst</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="n">zone_shp_G_node_lst</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># full shp_G node node_id list</span>
+        <span class="n">filtered_zone_shp_G_node_lst</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># only captures this zone&#39;s node id (NOT GHOST AGENT)</span>
+
+        <span class="n">connect_others_statistics</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">20</span><span class="p">)]</span>
+        <span class="n">connect_others_statistics</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">weight_sum</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># this variable collects link loading status for each tick</span>
+        <span class="c1"># then export average link loading status to a file before ending this process ends</span>
+        <span class="c1"># same structure as edge_loading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">accum_link_loading</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">plotly_pd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="p">[]})</span>
+
+        <span class="n">bus_stop_counter</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># this is a variable just for debugging: to make sure the number of bus stops is consistent through multiple re-runs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_kd_tree</span> <span class="o">=</span> <span class="n">my_kd_tree</span><span class="o">.</span><span class="n">MyKdTree</span><span class="p">(</span><span class="n">strict_naming</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">net_nodes_lst</span><span class="p">:</span>
+            <span class="n">zone_shp_G_node_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+                <span class="n">filtered_zone_shp_G_node_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+            <span class="c1"># count the number of bus stops: make sure to count exclusively nodes</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+                <span class="n">bus_stop_counter</span><span class="o">+=</span><span class="mi">1</span>
+
+            <span class="n">node_agent_mapping</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">node</span>
+            <span class="c1"># some statistics</span>
+            <span class="n">plotly_pd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="p">[[</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes_dict</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">long</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_x</span><span class="p">,</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes_dict</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">lat</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_y</span><span class="p">]],</span>
+                <span class="n">columns</span><span class="o">=</span><span class="n">plotly_pd</span><span class="o">.</span><span class="n">columns</span><span class="p">),</span> <span class="n">plotly_pd</span><span class="p">],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+                <span class="n">connect_others_statistics</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">shp_node</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes_dict</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="k">for</span> <span class="n">next_node_id</span> <span class="ow">in</span> <span class="n">shp_node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">float_edge_len</span> <span class="o">=</span> <span class="n">shp_node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">next_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">edge_length</span>
+                <span class="n">weight_sum</span> <span class="o">+=</span> <span class="n">float_edge_len</span>
+
+            <span class="c1"># build a local kd-tree as well</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">local_kd_tree</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">node</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Note: be careful when deciding sum(connect_others_statistics) +1 or -1</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;For Zone </span><span class="si">%d</span><span class="s1">, sum of weight is </span><span class="si">%f</span><span class="s1">, exclusive nodes: </span><span class="si">%d</span><span class="s1">, it has </span><span class="si">%d</span><span class="s1"> ghost nodes: </span><span class="si">%s</span><span class="s1"> and </span><span class="si">%d</span><span class="s1"> bus stops&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="n">weight_sum</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">net_nodes_lst</span><span class="p">)</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">connect_others_statistics</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="nb">sum</span><span class="p">(</span><span class="n">connect_others_statistics</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">connect_others_statistics</span><span class="p">),</span> <span class="n">bus_stop_counter</span><span class="p">))</span>
+
+        <span class="c1"># Create an empty figure to append scatter plots</span>
+        <span class="kn">import</span> <span class="nn">plotly.express</span> <span class="k">as</span> <span class="nn">px</span>
+
+        <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s1">&#39;mkdir -p output/round_</span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proceeding_round</span><span class="p">))</span>  <span class="c1"># round x</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">plotly_pd</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">write_image</span><span class="p">(</span><span class="s2">&quot;output/round_</span><span class="si">%d</span><span class="s2">/zone_</span><span class="si">%d</span><span class="s2">.png&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;proceeding_round&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">),</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;png&quot;</span><span class="p">,</span>
+                        <span class="n">width</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span>
+                        <span class="n">scale</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># DPI = scale * 600</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ghost_edge_dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># storing DIRECTED ghost; may connect to ghost to local, or local to ghost</span>
+        <span class="c1"># iterating all edges, check start and end</span>
+        <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">edges</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="ow">or</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ghost_edge_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ghost_edge_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ghost_edge_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># storing those &quot;stay on the node&quot;  vehicle agents:</span>
+        <span class="c1"># for example:</span>
+        <span class="c1"># key: Agent(0, 0, 3)</span>
+        <span class="c1"># values: [10, 534, 1003]</span>
+        <span class="c1"># will only record meaningful vehicle operations: like: preparing to cross the boundary; waiting for passengers without moving (that&#39;s a future feature)</span>
+        <span class="c1"># does not record: a lucky vehicle happens to be on a node without any meaningful operation</span>
+
+        <span class="c1"># print(&quot;Process: %d, number of nodes: %d, number of edges: %d&quot; % (</span>
+        <span class="c1"># self.rank, len(net_nodes_lst), len(list(self.net.graph.edges))))</span>
+        <span class="c1"># for test_node in net_nodes_lst:</span>
+        <span class="c1">#     if test_node.uid[0]==147:</span>
+        <span class="c1">#         print(&#39;find %s in rank %d&#39;%(str(test_node),self.rank))</span>
+        <span class="k">global</span> <span class="n">agent_group</span>
+
+        <span class="n">temp_data_files</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s1">&#39;./temp_data&#39;</span><span class="p">)</span>
+        <span class="n">vehicle_pickle_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">temp_data_files</span> <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;vehicles.pkl&#39;</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">vehicle_pickle_files</span><span class="p">:</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;./temp_data&#39;</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;read </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_path</span><span class="p">))</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">temp_vehicle_group</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">vehicle_id</span> <span class="ow">in</span> <span class="n">temp_vehicle_group</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">vehicle_i</span> <span class="o">=</span> <span class="n">temp_vehicle_group</span><span class="p">[</span><span class="n">vehicle_id</span><span class="p">]</span>
+                    <span class="c1"># condition 1: it can be found in this zone</span>
+                    <span class="c1"># condition 2: it belongs to this zone (rank)</span>
+                    <span class="c1"># This makes sure that all vehicles are assigned to their destination processes, WITHOUT DUPLICATION OR MISSING</span>
+<span class="w">                    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                    Note: vehicle_i.routing_queue[0] will be used as the node belonging mark, instead of vehicle_i.routing_arrived[-1]</span>
+<span class="sd">                    &quot;&quot;&quot;</span>
+                    <span class="k">if</span> <span class="n">vehicle_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">node_agent_mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> \
+                            <span class="n">node_agent_mapping</span><span class="p">[</span><span class="n">vehicle_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+                        <span class="c1"># rebuild routing_queue_cross_process_node_id, since the map partitioning changed</span>
+                        <span class="c1"># This prevents error &#39;Why this vehicle...is trying to transfer to current process&#39;</span>
+                        <span class="n">vehicle_i</span><span class="o">.</span><span class="n">belonging_rank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span>
+                        <span class="n">vehicle_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cross_boundary_node_id_generator</span><span class="p">(</span>
+                            <span class="n">vehicle_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">,</span> <span class="n">vehicle_i</span><span class="o">.</span><span class="n">routing_arrived</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">vehicle_i</span><span class="o">.</span><span class="n">belonging_rank</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                        <span class="n">agent_group</span><span class="p">[</span><span class="n">vehicle_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">vehicle_i</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Proceeding init: process </span><span class="si">%d</span><span class="s1"> has </span><span class="si">%d</span><span class="s1"> Vehicles&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">agent_group</span><span class="p">)))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;process: </span><span class="si">%d</span><span class="s1">, len(agent_group): </span><span class="si">%d</span><span class="s1">, &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">agent_group</span><span class="p">)))</span>
+
+        <span class="c1"># logging</span>
+        <span class="c1"># self.vehicle_logger.log_row(tick, agent_i.agent_id, self.rank, ts, longitude, latitude)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vehicle_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">TabularLogger</span><span class="p">(</span><span class="n">comm</span><span class="p">,</span> <span class="n">params</span><span class="p">[</span><span class="s1">&#39;vehicle_log_file&#39;</span><span class="p">],</span>
+                                                    <span class="p">[</span><span class="s1">&#39;tick&#39;</span><span class="p">,</span> <span class="s1">&#39;vehicle_id&#39;</span><span class="p">,</span> <span class="s1">&#39;rank&#39;</span><span class="p">,</span> <span class="s1">&#39;ts&#39;</span><span class="p">,</span>
+                                                     <span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;utm_x&#39;</span><span class="p">,</span> <span class="s1">&#39;utm_y&#39;</span><span class="p">,</span><span class="s1">&#39;vehicle_type&#39;</span><span class="p">,</span><span class="s1">&#39;speed&#39;</span><span class="p">])</span>
+
+        <span class="c1"># if self.rank==2:</span>
+        <span class="c1">#     sp_special=[147, 66, 148, 318, 319, 320, 321, 322, 323, 324, 270, 266, 269, 345, 346, 347, 365, 372, 357, 358, 212, 371, 363]</span>
+        <span class="c1">#     print(&#39;the cutting result for %s is %d&#39;%(str(sp_special), self.cross_boundary_node_id_generator(sp_special)))</span>
+
+        <span class="c1"># self.logging_coordinates()</span>
+
+
+
+<div class="viewcode-block" id="Model.at_end">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.at_end">[docs]</a>
+    <span class="k">def</span> <span class="nf">at_end</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Once the running process reaches the end tick, this function will be called</span>
+<span class="sd">        1. logging something</span>
+<span class="sd">        2. save something (e.g. vehicle status)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vehicle_logger</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c1"># log</span>
+        <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">load_lst</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;output/round_</span><span class="si">%d</span><span class="s2">/process_</span><span class="si">%d</span><span class="s2">_load.png&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">proceeding_round</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">))</span>
+        <span class="c1"># export ending node&#39;s weight</span>
+        <span class="kn">import</span> <span class="nn">pickle</span>
+        <span class="n">load_dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># key: node_id; value: loading (1 vehicle = 1 loading)</span>
+        <span class="k">for</span> <span class="n">vehicle_id</span> <span class="ow">in</span> <span class="n">agent_group</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">load_node_id</span> <span class="o">=</span> <span class="n">agent_group</span><span class="p">[</span><span class="n">vehicle_id</span><span class="p">]</span><span class="o">.</span><span class="n">routing_arrived</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">load_node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">load_dict</span><span class="p">:</span>
+                <span class="n">load_dict</span><span class="p">[</span><span class="n">load_node_id</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">load_dict</span><span class="p">[</span><span class="n">load_node_id</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;temp_data/node_load_zone_</span><span class="si">%d</span><span class="s1">.pkl&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">load_dict</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;temp_data/zone_</span><span class="si">%d</span><span class="s1">_vehicles.pkl&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">agent_group</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c1"># export link loading</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;temp_data/zone_</span><span class="si">%d</span><span class="s1">_accumulate_link_load.pkl&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accum_link_loading</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="Model.dist_calculate">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.dist_calculate">[docs]</a>
+    <span class="k">def</span> <span class="nf">dist_calculate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">,</span> <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">((</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">y1</span> <span class="o">-</span> <span class="n">y2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Model.node_find_nearest_bus_stop_node">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.node_find_nearest_bus_stop_node">[docs]</a>
+    <span class="k">def</span> <span class="nf">node_find_nearest_bus_stop_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_node_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the nearest bus stop and return bus stop&#39;s node it</span>
+<span class="sd">        Will first try current zone using self.network</span>
+<span class="sd">        If not found, then search the whole map</span>
+<span class="sd">        Note:</span>
+<span class="sd">        1. CANNOT find current node as nearest bus stop</span>
+<span class="sd">        @return: bus stop node id</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">argmin_node_id</span><span class="o">=</span><span class="kc">None</span>
+        <span class="c1"># try to search in local kd-tree first</span>
+        <span class="n">start_t</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">kdtree_query</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_kd_tree</span><span class="o">.</span><span class="n">find_nearest</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">start_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">long</span><span class="p">,</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">start_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">lat</span><span class="p">):</span>
+            <span class="c1"># based on format: ((x,y), name, kdtree-index, distance)</span>
+            <span class="c1"># e.g.</span>
+            <span class="c1"># ((6.0, 6.0), &#39;point (5,5)&#39;, 3, 0.7071067811865476)</span>
+            <span class="c1"># so retrive ketree_query[1] -&gt; name: in this case, name is the shp_G node id (NOT kdtree_index)</span>
+            <span class="n">candidate_node_id</span><span class="o">=</span><span class="n">kdtree_query</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">candidate_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">node_type</span><span class="o">==</span><span class="s1">&#39;bus_stop&#39;</span> <span class="ow">and</span> <span class="n">candidate_node_id</span><span class="o">!=</span><span class="n">start_node_id</span><span class="p">:</span>
+                <span class="n">argmin_node_id</span><span class="o">=</span><span class="n">candidate_node_id</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;it took </span><span class="si">%f</span><span class="s1"> seconds to find nearest bus stop in local zone&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_t</span><span class="p">))</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">argmin_node_id</span><span class="p">:</span>
+            <span class="n">start_t</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="c1"># we cannot find local zone&#39;s neartest bus stop</span>
+            <span class="c1"># use shp_G&#39;s kd-tree</span>
+            <span class="n">nearest_group</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">kdtree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">start_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">long</span><span class="p">,</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">start_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">lat</span><span class="p">]),</span> <span class="n">k</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">),</span> <span class="n">workers</span><span class="o">=-</span><span class="mi">1</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">nearest_node_id</span> <span class="ow">in</span> <span class="n">nearest_group</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">nearest_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">node_type</span> <span class="o">==</span> <span class="s1">&#39;bus_stop&#39;</span> <span class="ow">and</span> <span class="n">nearest_node_id</span><span class="o">!=</span><span class="n">start_node_id</span><span class="p">:</span>
+                    <span class="n">argmin_node_id</span> <span class="o">=</span> <span class="n">nearest_node_id</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;it took </span><span class="si">%f</span><span class="s1"> seconds to find nearest bus stop in global map&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_t</span><span class="p">))</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">argmin_node_id</span></div>
+
+
+<div class="viewcode-block" id="Model.cross_boundary_node_id_generator">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.cross_boundary_node_id_generator">[docs]</a>
+    <span class="k">def</span> <span class="nf">cross_boundary_node_id_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">curr_node</span><span class="p">,</span> <span class="n">agent_belonging_rank</span><span class="p">,</span> <span class="n">jump_first</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        routing_queue_cross_process_index</span>
+<span class="sd">        example:</span>
+<span class="sd">        routing_queue: [10, 20, 100, 150, 200, 300, 400]</span>
+<span class="sd">        Zone 1: 10, 20</span>
+<span class="sd">        Zone 2: 100, 150</span>
+<span class="sd">        Zone 3: 200, 300, 400</span>
+<span class="sd">        Then routing_queue_cross_process_node_id should be [20, 150]</span>
+<span class="sd">        ===== currently, routing_queue_cross_process_node_id&#39;s maximum load is 1 ======</span>
+<span class="sd">        ===== ...Because we cannot get other processes&#39; NodeAgent&#39;s property =====</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">agent_belonging_rank</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;agent_belonging_rank!=self.rank&#39;</span><span class="p">)</span>
+            <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># the function of jump_first:</span>
+        <span class="c1"># assuming a vehicle just transferred to another process, but it&#39;s still stopping at last process&#39;s node with node_id_mutex</span>
+        <span class="c1"># jump_first prevents this function returning the same node id endlessly (in this case the vehicle will never move again)</span>
+        <span class="c1"># jump_first=True in update() function</span>
+        <span class="c1"># jump_first=False in init() and step() rerouting</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">jump_first</span><span class="p">:</span>
+            <span class="n">sp_extend</span> <span class="o">=</span> <span class="p">[</span><span class="n">curr_node</span><span class="p">]</span> <span class="o">+</span> <span class="n">sp</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sp_extend</span> <span class="o">=</span> <span class="n">sp</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sp_extend</span><span class="p">)):</span>
+            <span class="n">next_node_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_agent_finder</span><span class="p">(</span><span class="n">sp_extend</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">agent_belonging_rank</span> <span class="o">!=</span> <span class="n">next_node_agent</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="n">sp_extend</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Model.node_agent_finder">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.node_agent_finder">[docs]</a>
+    <span class="k">def</span> <span class="nf">node_agent_finder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id_numeric</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        an auxiliary function to search Node Agent with shp_G node_id (numeric)</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            node_id_numeric: shp_G node is (numeric)</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            the reference to node agent object reference (if it&#39;s within the process); otherwise return None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">node_agent</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">node_agent</span> <span class="o">=</span> <span class="n">node_agent_mapping</span><span class="p">[</span><span class="n">node_id_numeric</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">node_agent</span></div>
+
+
+<div class="viewcode-block" id="Model.shortest_path">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.shortest_path">[docs]</a>
+    <span class="k">def</span> <span class="nf">shortest_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_node_agent</span><span class="p">,</span> <span class="n">end_node_agent</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        deprecated (not used) shortest_path function using networkx</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sp</span> <span class="o">=</span> <span class="p">[</span><span class="n">node_agent</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">node_agent</span> <span class="ow">in</span>
+              <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">start_node_agent</span><span class="p">,</span> <span class="n">end_node_agent</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="s2">&quot;biased_weight&quot;</span><span class="p">)]</span>
+        <span class="n">routing_queue_dist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">temp_dist</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">sp</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">sp</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">edge_length</span>
+                <span class="n">routing_queue_dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dist</span><span class="p">)</span>
+        <span class="n">sp</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sp</span><span class="p">,</span> <span class="n">routing_queue_dist</span></div>
+
+
+<div class="viewcode-block" id="Model.shortest_path_rustG">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.shortest_path_rustG">[docs]</a>
+    <span class="k">def</span> <span class="nf">shortest_path_rustG</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_node_id</span><span class="p">,</span> <span class="n">end_node_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         shortest path function using RuestworkX</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            start_node_id: integer start node id (shp_G)</span>
+<span class="sd">            end_node:id: integer end node id (shp_G)</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            sp: shortest path, list of integer shp_G node ids (remove heading)</span>
+<span class="sd">            routing_queue_dist, shortest path distance, list of float values of shortest path&#39;s link length</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">path_mapping</span> <span class="o">=</span> <span class="n">rustworkx</span><span class="o">.</span><span class="n">digraph_dijkstra_shortest_paths</span><span class="p">(</span><span class="n">rust_G</span><span class="p">,</span> <span class="n">start_node_id</span><span class="p">,</span>
+                                                                 <span class="n">end_node_id</span><span class="p">,</span>
+                                                                 <span class="nb">float</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">sp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">[</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">path_mapping</span><span class="p">))])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sp</span> <span class="o">=</span> <span class="p">[</span><span class="n">start_node_id</span><span class="p">]</span>
+
+        <span class="n">routing_queue_dist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">sp</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">temp_dist</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">sp</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">sp</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">edge_length</span>
+                <span class="n">routing_queue_dist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_dist</span><span class="p">)</span>
+        <span class="n">sp</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sp</span><span class="p">,</span> <span class="n">routing_queue_dist</span></div>
+
+
+<div class="viewcode-block" id="Model.logging_coordinates">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.logging_coordinates">[docs]</a>
+    <span class="k">def</span> <span class="nf">logging_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        repast4py&#39;s built-in function of logging coordinates</span>
+<span class="sd">        save coordinates and other attributes in csv file</span>
+<span class="sd">        we can decide the filter of logged vehicles here</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">schedule</span><span class="o">.</span><span class="n">tick</span>
+
+        <span class="c1"># 2024-02-01: skip logging_id, log ALL bus routes ONLY</span>
+        <span class="k">for</span> <span class="n">agent_id</span> <span class="ow">in</span> <span class="n">agent_group</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">agent_i</span> <span class="o">=</span> <span class="n">agent_group</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;BusAgent&#39;</span> <span class="ow">or</span> <span class="n">agent_id</span> <span class="ow">in</span> <span class="n">logging_id</span><span class="p">:</span>
+                <span class="n">ts</span> <span class="o">=</span> <span class="mi">1569642545</span> <span class="o">+</span> <span class="n">tick</span> <span class="o">+</span> <span class="n">sys_proceeding_tick</span>
+                <span class="c1"># print(walker.pt.__dir__())</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">long</span> <span class="o">+</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_x</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">lat</span> <span class="o">+</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_y</span>
+                <span class="n">longitude</span><span class="p">,</span> <span class="n">latitude</span> <span class="o">=</span> <span class="n">utm_longLat</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">inverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">vehicle_logger</span><span class="o">.</span><span class="n">log_row</span><span class="p">(</span><span class="n">tick</span> <span class="o">+</span> <span class="n">sys_proceeding_tick</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">agent_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="n">ts</span><span class="p">,</span> <span class="n">longitude</span><span class="p">,</span> <span class="n">latitude</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">long</span><span class="p">,</span>
+                                            <span class="n">agent_i</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">speed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vehicle_logger</span><span class="o">.</span><span class="n">write</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Model.adjust_dynamic_speed">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.adjust_dynamic_speed">[docs]</a>
+    <span class="k">def</span> <span class="nf">adjust_dynamic_speed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This function changes every vehicle&#39;s speed inside the zone</span>
+<span class="sd">        current TOY FORMULAE:</span>
+<span class="sd">        updated_speed = speed - 0.005 * (vehicle count)**2</span>
+
+<span class="sd">        @return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># THE FOR-LOOP SHOULD RUN TWICE</span>
+        <span class="c1"># FIRST TIME: update link load</span>
+        <span class="c1"># SECOND TIME: update vehicle</span>
+
+        <span class="c1"># iterate all vehicles within the zone and update the loading</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edge_loading</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">v_id</span> <span class="ow">in</span> <span class="n">agent_group</span><span class="p">:</span>
+            <span class="n">agent_i</span> <span class="o">=</span> <span class="n">agent_group</span><span class="p">[</span><span class="n">v_id</span><span class="p">]</span>
+            <span class="n">last_node_id</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_arrived</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">next_node_id</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">next_node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">last_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">next_Nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;error: dynamic speed: vehicle last node id is not connected to next node id&#39;</span><span class="p">)</span>
+                <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">link_key_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">last_node_id</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">next_node_id</span><span class="p">)</span>
+            <span class="c1"># update single tick variable</span>
+            <span class="k">if</span> <span class="n">link_key_str</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_loading</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">edge_loading</span><span class="p">[</span><span class="n">link_key_str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">edge_loading</span><span class="p">[</span><span class="n">link_key_str</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># update accumulate global variable as well</span>
+            <span class="k">if</span> <span class="n">link_key_str</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">accum_link_loading</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">accum_link_loading</span><span class="p">[</span><span class="n">link_key_str</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">accum_link_loading</span><span class="p">[</span><span class="n">link_key_str</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">for</span> <span class="n">v_id</span> <span class="ow">in</span> <span class="n">agent_group</span><span class="p">:</span>
+            <span class="n">agent_i</span> <span class="o">=</span> <span class="n">agent_group</span><span class="p">[</span><span class="n">v_id</span><span class="p">]</span>
+            <span class="n">last_node_id</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_arrived</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">next_node_id</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">next_node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">last_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">next_Nodes</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;adjust_dynamic_speed error: vehicle last node id is not connected to next node id&#39;</span><span class="p">)</span>
+                <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">link_key_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">last_node_id</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">next_node_id</span><span class="p">)</span>
+            <span class="n">edge_length</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">last_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">next_node_id</span><span class="p">]</span><span class="o">.</span><span class="n">edge_length</span>
+            <span class="n">link_loading</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_loading</span><span class="p">[</span><span class="n">link_key_str</span><span class="p">]</span>
+            <span class="n">free_flow_vehicle_count</span> <span class="o">=</span> <span class="n">edge_length</span> <span class="o">/</span> <span class="mi">25</span>
+            <span class="k">if</span> <span class="n">link_loading</span> <span class="o">&lt;</span> <span class="n">free_flow_vehicle_count</span><span class="p">:</span>
+                <span class="n">adjust_alpha</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">200</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">adjust_alpha</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mi">100</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">speed</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">original_speed</span> <span class="o">-</span> <span class="n">adjust_alpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">link_loading</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+
+
+<div class="viewcode-block" id="Model.step">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.step">[docs]</a>
+    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        repast4py&#39;s built-in function of updating simulator&#39;s status in each tick</span>
+<span class="sd">        this function will be executed every tick</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">adjust_dynamic_speed</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s1">&#39;Before </span><span class="si">%d</span><span class="s1">, process: </span><span class="si">%d</span><span class="s1">, len(agent_group): </span><span class="si">%d</span><span class="s1">, &#39;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">schedule</span><span class="o">.</span><span class="n">tick</span> <span class="o">+</span> <span class="n">sys_proceeding_tick</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">agent_group</span><span class="p">)))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># should reset here, rather than save() function</span>
+
+        <span class="c1"># print(&#39;process: %d, len(controlled_agent_id): %d, &#39; % (self.rank, len(self.controlled_agent_id)))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">schedule</span><span class="o">.</span><span class="n">tick</span><span class="p">)</span>
+
+        <span class="n">del_agent_id_lst</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">agent_id</span> <span class="ow">in</span> <span class="n">agent_group</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="c1"># if agent_id==5074:</span>
+            <span class="c1">#     print(&#39;5074!&#39;)</span>
+            <span class="n">agent_i</span> <span class="o">=</span> <span class="n">agent_group</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span>
+
+            <span class="n">update_single_agent_next_tick_status</span><span class="p">(</span><span class="n">agent_i</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">net_nodes_lst</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+                <span class="n">start_node_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_agent_finder</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">start_node_agent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;step() start_node_agent None error: </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">agent_i</span><span class="p">),</span> <span class="n">node_agent_mapping</span><span class="p">))</span>
+                    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span><span class="o">.</span><span class="n">node_type</span><span class="o">!=</span><span class="s1">&#39;bus_stop&#39;</span><span class="p">:</span>
+                    <span class="c1"># that means a vehicle just completed bus_stop -&gt; home, and needs to find next job in nearest bus stop</span>
+                    <span class="n">end_node_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_find_nearest_bus_stop_node</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">)</span>  <span class="c1"># find nearest bus stop; this function guarantees to find one</span>
+                    <span class="k">if</span> <span class="n">end_node_id</span> <span class="o">==</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;step() err: nearest bus stop is itself&#39;</span><span class="p">)</span>
+                        <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># that means a vehicle just completed last place -&gt; bus stop, and needs to take the passenger to home</span>
+                    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                        <span class="n">end_node_id</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span><span class="o">.</span><span class="n">node_id</span>
+                        <span class="k">if</span> <span class="n">end_node_id</span> <span class="o">!=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">:</span>
+                            <span class="k">break</span>
+
+
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">destination</span> <span class="o">=</span> <span class="n">end_node_id</span>
+                <span class="n">sp</span><span class="p">,</span> <span class="n">sp_dist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shortest_path_rustG</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">,</span> <span class="n">end_node_id</span><span class="p">)</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span> <span class="o">=</span> <span class="n">sp</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span> <span class="o">=</span> <span class="n">sp_dist</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">1</span>
+
+
+                <span class="c1"># 2024-02-15</span>
+                <span class="c1"># debug something about vehicle: home-&gt;bus stop-&gt;home-&gt;bus stop-&gt;home...</span>
+                <span class="k">if</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span><span class="o">.</span><span class="n">node_type</span> <span class="o">!=</span> <span class="s1">&#39;bus_stop&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Vehicle </span><span class="si">%d</span><span class="s1"> is leaving node </span><span class="si">%d</span><span class="s1"> to nearest bus stop </span><span class="si">%d</span><span class="s1">, distance </span><span class="si">%.2f</span><span class="s1"> meters&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">,</span> <span class="n">end_node_id</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">sp_dist</span><span class="p">)))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;Vehicle </span><span class="si">%d</span><span class="s2"> is leaving bus stop </span><span class="si">%d</span><span class="s2"> to passenger&#39;s home </span><span class="si">%d</span><span class="s2">, distance </span><span class="si">%.2f</span><span class="s2"> meters&quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">,</span> <span class="n">end_node_id</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">sp_dist</span><span class="p">)))</span>
+
+
+                <span class="c1"># change end_node_id for bus HERE:</span>
+                <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;BusAgent&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;debug: a bus has arrived&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span> <span class="o">==</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">start_station</span><span class="p">:</span>
+                        <span class="c1"># currently the bus is located at the start_station</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">destination</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">end_station</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">bus_complete_sp</span><span class="p">)</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">(</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">bus_complete_sp_dist</span><span class="p">)</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="k">elif</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span> <span class="o">==</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">end_station</span><span class="p">:</span>
+                        <span class="c1"># currently the bus is located at the end_station</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">destination</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">start_station</span>
+                        <span class="n">sp_temp</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">bus_complete_sp</span><span class="p">)</span>
+                        <span class="n">sp_dist_temp</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">bus_complete_sp_dist</span><span class="p">)</span>
+                        <span class="n">sp_dist_temp</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+                        <span class="n">sp_temp</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># remove end station id</span>
+                        <span class="n">sp_temp</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+                        <span class="n">sp_temp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">start_station</span><span class="p">)</span>
+                        <span class="c1"># modify property</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">sp_temp</span><span class="p">)</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">sp_dist_temp</span><span class="p">)</span>
+                        <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;err: bus cannot locate itself after arriving at start/stop station&#39;</span><span class="p">)</span>
+                        <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="c1"># end bus route modify</span>
+
+
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cross_boundary_node_id_generator</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">,</span>
+                                                                                                    <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">,</span>
+                                                                                                    <span class="n">agent_i</span><span class="o">.</span><span class="n">belonging_rank</span><span class="p">,</span>
+                                                                                                    <span class="kc">False</span><span class="p">)</span>
+
+                <span class="c1"># a special case: the agent arrived at the boundary node and generate a new routing plan, but the new routing plan requires the vehicle:</span>
+                <span class="c1"># ... to cross the boundary immediately</span>
+                <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">==</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">:</span>
+                    <span class="c1"># print(&#39;debug: changing agent %d status to 2 in status==0 case&#39;%(agent_id))</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">2</span>
+
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">debug_history_routing_queue_cross_process_node_id_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span><span class="p">)</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">debug_original_routing_queue</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">del_agent_id_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">agent_id</span><span class="p">)</span>
+                <span class="n">local_node_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_agent_finder</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">)</span>
+                <span class="n">target_node_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_agent_finder</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">target_node_agent</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> cannot find node </span><span class="si">%d</span><span class="s1"> in process </span><span class="si">%d</span><span class="s1">, with node pool </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="nb">vars</span><span class="p">(</span><span class="n">agent_i</span><span class="p">),</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_agent_mapping</span><span class="p">)))</span>
+                    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">target_node_agent</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span>
+                        <span class="s1">&#39;Why this vehicle </span><span class="si">%s</span><span class="s1"> is trying to transfer to current process </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">agent_i</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">))</span>
+                    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="c1"># node_load_vehicle_dict structure:</span>
+                <span class="c1"># key: local agent node reference</span>
+                <span class="c1"># value: (agent_id, target agent node reference)</span>
+                <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span> <span class="o">=</span> <span class="p">[(</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">target_node_agent</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">])]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">agent_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">node_load_vehicle_dict</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">agent_id</span><span class="p">,</span> <span class="n">target_node_agent</span><span class="o">.</span><span class="n">uid</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+
+        <span class="c1"># print(&#39;At %d, Rank %d, debug node_load_vehicle_dict: %s&#39;%(self.runner.schedule.tick, self.rank,str(self.node_load_vehicle_dict)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">synchronize</span><span class="p">(</span><span class="n">restore_agent</span><span class="p">)</span>
+
+        <span class="c1"># delete after synchronize, due to the reason that a node can be re-visited multiple times</span>
+        <span class="c1"># it&#39;s better to delete in batch, rather in save()</span>
+        <span class="k">for</span> <span class="n">agent_id</span> <span class="ow">in</span> <span class="n">del_agent_id_lst</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">agent_group</span><span class="p">[</span><span class="n">agent_id</span><span class="p">]</span>
+
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s1">&#39;After </span><span class="si">%d</span><span class="s1">, process: </span><span class="si">%d</span><span class="s1">, len(agent_group): </span><span class="si">%d</span><span class="s1">, &#39;</span> <span class="o">%</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">schedule</span><span class="o">.</span><span class="n">tick</span> <span class="o">+</span> <span class="n">sys_proceeding_tick</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">agent_group</span><span class="p">)))</span>
+        <span class="n">load_lst</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">agent_group</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging_coordinates</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Model.start">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.Model.start">[docs]</a>
+    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Repast4py&#39;s built-in function or executing runner</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runner</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="update_single_agent_next_tick_status">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.update_single_agent_next_tick_status">[docs]</a>
+<span class="k">def</span> <span class="nf">update_single_agent_next_tick_status</span><span class="p">(</span><span class="n">agent_i</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    ========check cross boundary case first============</span>
+<span class="sd">    Cross-boundary acts like a strong road bumper</span>
+<span class="sd">    whatever the speed is, one vehicle has only two choices:</span>
+<span class="sd">    1. Stop at the FIRST bumper(status=2)</span>
+<span class="sd">    2. original logic</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span><span class="p">:</span>
+        <span class="c1"># if agent_i.routing_queue_cross_process_node_id not in agent_i.routing_queue:</span>
+        <span class="c1">#     print(&#39;%d not in %s, for agent %s&#39;%(agent_i.routing_queue_cross_process_node_id, str(agent_i.routing_queue), vars(agent_i)))</span>
+        <span class="c1">#     exit(1)</span>
+        <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">==</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">:</span>
+            <span class="c1"># a special case: the vehicle is stopping by its cross-process-node (usually caused by spawning at cross-process-node)</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># waiting for next process&#39;s handle</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="c1"># VERY IMPORTANT</span>
+            <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">routing_queue_cutting_index</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span><span class="p">)</span>
+            <span class="c1"># print(&#39;agent %d have index %d&#39;%(agent_i.agent_id, routing_queue_cutting_index))</span>
+            <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">dist_compensation</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">shadow_dist</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">speed</span> <span class="o">+</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">dist_compensation</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">shadow_dist</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">speed</span>
+            <span class="k">if</span> <span class="n">shadow_dist</span> <span class="o">&gt;=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[</span>
+                                  <span class="p">:</span><span class="n">routing_queue_cutting_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]):</span>  <span class="c1"># this also applies to cutting index=-1&#39;s case</span>
+
+                <span class="c1"># compensate distance loss after transferring</span>
+                <span class="c1"># should do it now; prevent routing_queue_dist being changed later (del xxxxx)</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">dist_compensation</span> <span class="o">=</span> <span class="n">shadow_dist</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span>
+                    <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[:</span><span class="n">routing_queue_cutting_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+
+                <span class="c1"># if agent_i.agent_id==0 and agent_i.dist_compensation!=0:</span>
+                <span class="c1">#     print(&#39;At %d, agent 0 compensation %f&#39;%(model.runner.schedule.tick, agent_i.dist_compensation ))</span>
+                <span class="c1">#     # exit(1)</span>
+
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">edge_id_mutex</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">long</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span><span class="o">.</span><span class="n">long</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_x</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">lat</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span><span class="o">.</span><span class="n">lat</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_y</span>
+                <span class="c1"># debug</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_arrived</span> <span class="o">+=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[:</span><span class="n">routing_queue_cutting_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">del</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[:</span><span class="n">routing_queue_cutting_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">del</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[</span>
+                    <span class="p">:</span><span class="n">routing_queue_cutting_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># waiting for next process&#39;s handle</span>
+                <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">2</span>
+
+                <span class="c1"># VERY IMPORTANT</span>
+                <span class="k">return</span>
+
+    <span class="c1"># =========Original coordinates moving code===========</span>
+    <span class="c1"># step 1: use routing_queue_dist to determine node operation</span>
+    <span class="c1"># step 2: check destination arrival status first</span>
+    <span class="c1"># step 3: update long and lat depending on #step2 arrival check</span>
+    <span class="c1"># step 4: update agent status if necessary</span>
+    <span class="c1"># step 5: don&#39;t forget to update routing_queue_dist</span>
+    <span class="n">arrived</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1"># if agent_i.agent_id == 0 and agent_i.dist_compensation != 0:</span>
+    <span class="c1">#     print(&#39;At %d, agent 0 compensation %f&#39; % (model.runner.schedule.tick, agent_i.dist_compensation))</span>
+    <span class="c1">#     exit(1)</span>
+
+    <span class="k">if</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">dist_compensation</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">shadow_dist</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">speed</span> <span class="o">+</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">dist_compensation</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">dist_compensation</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">shadow_dist</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">speed</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">:</span>
+        <span class="n">arrived</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">elif</span> <span class="n">shadow_dist</span> <span class="o">&lt;</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">arrived</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">elif</span> <span class="n">shadow_dist</span> <span class="o">&gt;=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">):</span>
+        <span class="n">arrived</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">if</span> <span class="n">arrived</span><span class="p">:</span>
+        <span class="c1"># just arrived</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The following code:</span>
+<span class="sd">        once arrived, set status to 0 and clear all targets/movements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># first: update the location as destination</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_arrived</span> <span class="o">+=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">destination</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">edge_id_mutex</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">long</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span><span class="o">.</span><span class="n">long</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_x</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">lat</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">node_id_mutex</span><span class="p">]</span><span class="o">.</span><span class="n">lat</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_y</span>
+        <span class="c1"># Second: clear and wait for re-routing</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Extra</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_cross_process_node_id</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pop_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">shadow_dist</span> <span class="o">-</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[</span><span class="n">pop_index</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">shadow_dist</span> <span class="o">-=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[</span><span class="n">pop_index</span><span class="p">]</span>
+            <span class="n">pop_index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c1"># status: just cannot arrive</span>
+        <span class="k">if</span> <span class="n">pop_index</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_arrived</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[:</span><span class="n">pop_index</span><span class="p">])</span>
+            <span class="k">del</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[:</span><span class="n">pop_index</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[:</span><span class="n">pop_index</span><span class="p">]</span>
+        <span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue_dist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-=</span> <span class="n">shadow_dist</span>  <span class="c1"># NO LENGTH CHECK, JUST CONFIDENT IN MY **** CODE</span>
+        <span class="c1"># From node self.routing_arrived[-1] to node [self.next_node]</span>
+        <span class="c1"># distance to self.routing_arrived[-1]: shadow_dist</span>
+        <span class="n">start_node</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_arrived</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">end_node</span> <span class="o">=</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">agent_i</span><span class="o">.</span><span class="n">routing_queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="c1"># print(&quot;%s, start=%d, end=%d&quot; %(str(self.routing_queue), start_node.node_id, end_node.node_id))</span>
+        <span class="k">if</span> <span class="n">pop_index</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">long</span> <span class="o">=</span> <span class="n">start_node</span><span class="o">.</span><span class="n">long</span> <span class="o">+</span> <span class="n">shadow_dist</span> <span class="o">*</span> \
+                           <span class="n">start_node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">end_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">unit_vector</span><span class="p">[</span>
+                               <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_x</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">lat</span> <span class="o">=</span> <span class="n">start_node</span><span class="o">.</span><span class="n">lat</span> <span class="o">+</span> <span class="n">shadow_dist</span> <span class="o">*</span> <span class="n">start_node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">end_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">unit_vector</span><span class="p">[</span>
+                <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">shp_G</span><span class="o">.</span><span class="n">box_y</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">long</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">long</span> <span class="o">+</span> <span class="n">shadow_dist</span> <span class="o">*</span> <span class="n">start_node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">end_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">unit_vector</span><span class="p">[</span>
+                <span class="mi">0</span><span class="p">]</span>  <span class="c1"># does not need to minus box base coord</span>
+            <span class="n">agent_i</span><span class="o">.</span><span class="n">lat</span> <span class="o">=</span> <span class="n">agent_i</span><span class="o">.</span><span class="n">lat</span> <span class="o">+</span> <span class="n">shadow_dist</span> <span class="o">*</span> <span class="n">start_node</span><span class="o">.</span><span class="n">next_Nodes</span><span class="p">[</span><span class="n">end_node</span><span class="o">.</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">unit_vector</span><span class="p">[</span>
+                <span class="mi">1</span><span class="p">]</span>  <span class="c1"># does not need to minus box base coord</span></div>
+
+
+
+<div class="viewcode-block" id="run">
+<a class="viewcode-back" href="../run_proceeding.html#run_proceeding.run">[docs]</a>
+<span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Repast4py&#39;s built-in function</span>
+<span class="sd">    init the process caller (openmpi)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">shp_G</span><span class="p">,</span> <span class="n">rust_G</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="s1">&#39;./temp_data/updated_rust_G.pkl&#39;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;read updated rust_G&#39;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;./temp_data/updated_rust_G.pkl&#39;</span><span class="p">,</span><span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">rust_G</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="n">shp_G</span> <span class="o">=</span> <span class="n">shp_reader</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;err: cannot read updated rust_G&#39;</span><span class="p">)</span>
+        <span class="c1"># ok, just exit here</span>
+        <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># shp_G, rust_G = rustworkx_shortest_path.run()</span>
+
+    <span class="k">global</span> <span class="n">model</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">(</span><span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">start</span><span class="p">()</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Repast4py&#39;s built-in function</span>
+<span class="sd">    openmpi params and universal controller will be executed here</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">create_args_parser</span><span class="p">()</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">init_params</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">parameters_file</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">parameters</span><span class="p">)</span>
+    <span class="n">run</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, UA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

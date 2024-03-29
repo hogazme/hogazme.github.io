@@ -1,0 +1,7 @@
+humanAgent module
+=================
+
+.. automodule:: humanAgent
+   :members:
+   :undoc-members:
+   :show-inheritance:

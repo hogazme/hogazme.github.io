@@ -1,0 +1,7 @@
+VehicleAgent module
+===================
+
+.. automodule:: VehicleAgent
+   :members:
+   :undoc-members:
+   :show-inheritance:

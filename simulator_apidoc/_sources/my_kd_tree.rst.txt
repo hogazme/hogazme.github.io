@@ -1,0 +1,7 @@
+my\_kd\_tree module
+===================
+
+.. automodule:: my_kd_tree
+   :members:
+   :undoc-members:
+   :show-inheritance:

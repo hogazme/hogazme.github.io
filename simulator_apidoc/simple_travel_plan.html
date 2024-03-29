@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>simple_travel_plan module &mdash; repast4birmingham_sphinx  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="shp_reader module" href="shp_reader.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            repast4birmingham_sphinx
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="VehicleAgent.html">VehicleAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="check_sp_validity.html">check_sp_validity module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graph.html">graph module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="humanAgent.html">humanAgent module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="my_kd_tree.html">my_kd_tree module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="routing_generator.html">routing_generator module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="run.html">run module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="run_proceeding.html">run_proceeding module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rustworkx_shortest_path.html">rustworkx_shortest_path module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="shp_reader.html">shp_reader module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">simple_travel_plan module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.get_nearest_node_id"><code class="docutils literal notranslate"><span class="pre">get_nearest_node_id()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.get_node_type"><code class="docutils literal notranslate"><span class="pre">get_node_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.get_random_point_node_id"><code class="docutils literal notranslate"><span class="pre">get_random_point_node_id()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.get_transfer_nodes"><code class="docutils literal notranslate"><span class="pre">get_transfer_nodes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.get_travel_plan"><code class="docutils literal notranslate"><span class="pre">get_travel_plan()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.parse_shortest_path"><code class="docutils literal notranslate"><span class="pre">parse_shortest_path()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.run"><code class="docutils literal notranslate"><span class="pre">run()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#simple_travel_plan.set_up_transit_graph"><code class="docutils literal notranslate"><span class="pre">set_up_transit_graph()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">repast4birmingham_sphinx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">simple_travel_plan module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/simple_travel_plan.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-simple_travel_plan">
+<span id="simple-travel-plan-module"></span><h1>simple_travel_plan module<a class="headerlink" href="#module-simple_travel_plan" title="Link to this heading"></a></h1>
+<p>Suppose a passenger starts from x, and he/she plans to go y
+a SIMPLE travel plan might look like this:
+x -&gt; bus stop 1: the passenger walks from x to bus stop 1
+bus stop 1 -&gt; bus stop 2 (by bus route xxxxx): the passenger takes bus xxxxx, from bus stop 1 to bus stop 2
+bus stop 2 -&gt; y: the passenger walks from bus stop 2 to destination y</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.get_nearest_node_id">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">get_nearest_node_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">center_node_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'bus_stop'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#get_nearest_node_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.get_nearest_node_id" title="Link to this definition"></a></dt>
+<dd><p>type: “bus_stop” or “point”</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.get_node_type">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">get_node_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#get_node_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.get_node_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.get_random_point_node_id">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">get_random_point_node_id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#get_random_point_node_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.get_random_point_node_id" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.get_transfer_nodes">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">get_transfer_nodes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list_of_lists</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#get_transfer_nodes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.get_transfer_nodes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.get_travel_plan">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">get_travel_plan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_node_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination_node_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transit_graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#get_travel_plan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.get_travel_plan" title="Link to this definition"></a></dt>
+<dd><p>&#64;shuocheng guo</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_node_id</strong> – integer, shp_G node id as start node</p></li>
+<li><p><strong>destination_node_id</strong> – integer, shp_G node id as destination node</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>you can use any format you want, so long as it contains such info: from node x to node y, you should walk/take bus (if take bus, please include which bus to take)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.parse_shortest_path">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">parse_shortest_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shortest_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#parse_shortest_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.parse_shortest_path" title="Link to this definition"></a></dt>
+<dd><p>(node_id, travel_mode, bus_route_id if applicable)
+travel_mode: “walk” or “bus”</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.run">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">random_start_bus_stop_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_end_bus_stop_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transit_graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.run" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="simple_travel_plan.set_up_transit_graph">
+<span class="sig-prename descclassname"><span class="pre">simple_travel_plan.</span></span><span class="sig-name descname"><span class="pre">set_up_transit_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/simple_travel_plan.html#set_up_transit_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#simple_travel_plan.set_up_transit_graph" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="shp_reader.html" class="btn btn-neutral float-left" title="shp_reader module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, UA.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

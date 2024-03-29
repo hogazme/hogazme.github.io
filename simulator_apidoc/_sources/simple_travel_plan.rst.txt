@@ -1,0 +1,7 @@
+simple\_travel\_plan module
+===========================
+
+.. automodule:: simple_travel_plan
+   :members:
+   :undoc-members:
+   :show-inheritance:

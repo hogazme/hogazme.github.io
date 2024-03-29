@@ -1,0 +1,7 @@
+check\_sp\_validity module
+==========================
+
+.. automodule:: check_sp_validity
+   :members:
+   :undoc-members:
+   :show-inheritance:
