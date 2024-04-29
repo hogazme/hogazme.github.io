@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang='en'>
+
 <head>
     <meta charset='utf-8' />
     <title>Getting started with the Mapbox Directions API</title>
@@ -35,9 +36,9 @@
     #instructions {
         position: absolute;
         left: 20px; /* Align with the manual box */
-        top: calc(20% + 10px); /*30% + 10px /* Positioned below the manual box, adjust based on manual's height */
+        top: calc(40% + 10px); /*30% + 10px /* Positioned below the manual box, adjust based on manual's height */
         width: 20%; /* Match width with manual box */
-        bottom: 50%; /* Adjust as needed */
+        bottom: 10%; /* Adjust as needed */
         padding: 20px;
         background-color: #fff;
         overflow-y: scroll;
@@ -46,14 +47,46 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         border: 1px solid #ccc;
     }
+    .popup-button {
+        background-color: #bbb8b8;
+        color: black;
+        border: none;
+        padding: 8px 16px;
+        margin: 5px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+        font-family: sans-serif;
+    }
+
+    .popup-button:hover {
+        background-color: #0056b3; /* Darker blue on hover */
+    }
+
+    .emoji-marker {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 30px;
+        height: 30px;
+        text-align: center;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        /* background-color: #fff; */
+    }
     </style>
 </head>
+
 <body>
     <div id='map'></div>
     <div id="instructions"></div>
     <div id="manual">
-        <h3>Map Manual</h3>
-        <p>Click at any point in the map for trip duration and routing.</p>
+        <h3>Map Guide</h3>
+        <p>This map displays pre-set start and end points for your trip.</p>
+        <p>Look for the ⚡ symbol to find two available charging stations along your route.</p>
+        <p>Click on any station to view more details about it.</p>
+        <p>For navigation, simply click on any two points on the map to get the trip duration and route information.</p>
     </div>
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoiaGdhem1laCIsImEiOiJjbGx5NzZpc3QwYWZtM2xwcjE3a2J5bjQxIn0.cpUto7a5fO9EgSY2LCjOSQ';
@@ -128,35 +161,94 @@
             )} min 🚗</strong></p><ol>${tripInstructions}</ol>`;
     }
 
+    
         const chargingStations = [
-        {
-            coordinates: [-122.62488635696639, 45.54968477818996], // Sample coordinates for the first station , 
-            imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipMxbI3sgkLQH0icgQW5DEUxg57XsMSVUQBk_l1q=w408-h306-k-no', // Image URL for the first station
-            name: 'Charging Station 1',
-            plugs: 'J1772, CHAdeMO, CCS Combo'
-        },
-        {
-            coordinates: [-122.64454158343236, 45.55990193982297], // Sample coordinates for the second station , 
-            imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipOk9QNeKXYR4v2l6TcCg1RtpVpW8a8UmRl5yVQ=w408-h544-k-no', // Image URL for the second station
-            name: 'Chargin Station 2',
-            plugs: 'J1772, CHAdeMO, CCS Combo'
-        }
+            {
+                coordinates: [-122.62488635696639, 45.54968477818996], // Sample coordinates for the first station , 
+                imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipMxbI3sgkLQH0icgQW5DEUxg57XsMSVUQBk_l1q=w408-h306-k-no', // Image URL for the first station
+                name: 'Charging Station 1',
+                plugs: 'J1772 (3), CHAdeMO (3), CCS Combo (3)',
+                fees: '$1.00/Hr for first 8 hours, $2.00/Hr for next 12 hours, $1.00/Hr afterwards',
+                parking: 'Free parking',
+                // use emoji for the rating 4.5 stars
+                rating: '⭐⭐⭐⭐⭐'
+            },
+            {
+                coordinates: [-122.64454158343236, 45.55990193982297], // Sample coordinates for the second station , 
+                imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipOk9QNeKXYR4v2l6TcCg1RtpVpW8a8UmRl5yVQ=w408-h544-k-no', // Image URL for the second station
+                name: 'Chargin Station 2',
+                plugs: 'J1772 (1), CHAdeMO (2), CCS Combo (1)',
+                fees: 'Free for 30 minutes, $1.50/Hr after',
+                parking: 'Free parking',
+                rating: '⭐⭐⭐'
+            }
         ];
-        // Function to add charging stations to the map
+
+        const fixedPoint1 = {
+        lat: chargingStations[0].coordinates[1], // Latitude from the first station
+        lng: chargingStations[0].coordinates[0],
+            emoji: '📍'  // Example emoji
+        };
+        const fixedPoint2 = {
+        lat: chargingStations[1].coordinates[1], // Latitude from the second station
+        lng: chargingStations[1].coordinates[0],
+            emoji: '📍'  // Example emoji
+        };
+
+        function addEmojiMarker(point) {
+            if (window.emojiMarker) {
+                window.emojiMarker.remove();
+            }
+            const el = document.createElement('div');
+            el.className = 'emoji-marker';
+            el.style.fontSize = '24px';  // Set the font size for the emoji
+            el.innerHTML = point.emoji;
+            const popup = new mapboxgl.Popup({ offset: 25 })
+                .setHTML(`<h4>Fixed Point Information</h4><p>This is a fixed point marked by an emoji 📍 on the map.</p>`);
+            window.emojiMarker = new mapboxgl.Marker({ element: el })
+                .setLngLat([point.lng, point.lat])
+                .setPopup(popup)  // Attach the popup to the marker
+                .addTo(map);
+            window.emojiMarker.getPopup().open();
+        }
+        
+        function addEmojiMarkerWithFeedback(point, stationName, plugs, encodedImageUrl, buttonElement, poi_type) {
+            // set poi emoji to be 🍴 if poi_type is restaurant
+            const poi_emoji = poi_type === 'restaurant' ? '🍴' : '🛒';
+            // Use the station's location to fetch and display nearby restaurants
+            addPOIs(poi_type, '🍴', point.lat, point.lng, stationName);
+
+            // Update the popup content to show that POIs are being added to the map
+            const newPopupContent = `
+                <p>Nearby ${poi_type}s added to the map! ${poi_emoji}</p>
+            `;
+            
+            // Remove the previous popup and display updated information
+            if (window.currentPopup) {
+                window.currentPopup.remove();
+            }
+            const el = buttonElement.closest('.mapboxgl-popup');
+            if (el) {
+                const coordinates = new mapboxgl.LngLat(point.lng, point.lat);
+                const newPopup = new mapboxgl.Popup({ offset: 25, closeOnClick: false })
+                    .setLngLat(coordinates)
+                    .setHTML(newPopupContent)
+                    .addTo(map);
+                window.currentPopup = newPopup; // Store reference to new popup
+            }
+        }
+
+
         function addChargingStations() {
             chargingStations.forEach(station => {
                 const el = document.createElement('div');
-                el.className = 'marker'; // You can add custom CSS styles to this class
-                el.innerHTML = '⚡'; // Using the lightning bolt emoji for charging stations
-                el.style.fontSize = '32px'; // You can adjust the size as needed
+                el.className = 'marker';
+                el.innerHTML = '⚡';
+                el.style.fontSize = '32px';
 
-                const popupContent = `
-                    <h3>${station.name}</h3>
-                    <p>Available Plugs: ${station.plugs}</p>
-                    <img src="${station.imageUrl}" alt="${station.name}" style="width:100%;max-width:300px;">
-                `;
+                const encodedImageUrl = encodeURIComponent(station.imageUrl);
+                const popupContent = generatePopupContent(station.name, station.plugs, encodedImageUrl, station.coordinates, station.rating, station.parking, station.fees);
 
-                // Create a marker with the custom element and add to the map
                 new mapboxgl.Marker({ element: el })
                     .setLngLat(station.coordinates)
                     .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
@@ -164,28 +256,98 @@
             });
         }
 
-        async function addPOIs(searchTerm, emoji, latitude, longitude) {
-        // Use the provided latitude and longitude for the proximity
-        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchTerm)}.json?type=poi&proximity=${longitude},${latitude}&access_token=${mapboxgl.accessToken}`;
+        function generatePopupContent(stationName, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees) {
+            // if the station name is equall to the first station name, then return the first station position
+            if (stationName === chargingStations[0].name) {
+                fixedPoint = fixedPoint1;
+            } else {
+                fixedPoint = fixedPoint2;
+            }
+            return `
+                <h3>${stationName}</h3>
+                <img src="${decodeURIComponent(encodedImageUrl)}" alt="${stationName}" style="width:100%;max-width:300px;">
+                <button class="popup-button" onclick="showMoreInfo('${stationName}', 'chargers', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Chargers</button>
+                <button class="popup-button" onclick="showMoreInfo('${stationName}', 'fee', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Charging Fee</button>
+                <button class="popup-button" onclick="showMoreInfo('${stationName}', 'parking', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Parking</button>
+                <button class="popup-button" onclick="showMoreInfo('${stationName}', 'rating', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Users Rating</button>
+    
+                <button class="popup-button" onclick="addEmojiMarkerWithFeedback(fixedPoint, '${stationName}', '${plugs}', '${encodedImageUrl}', this, 'restaurant')">Show Nearby Restaurants</button>
+                `;
+        }
 
-        const response = await fetch(url);
-        const data = await response.json();
+        function showMoreInfo(stationName, infoType, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees) {
+            let content = "";
+            switch (infoType) {
+                case "chargers":
+                    content = `<p>${plugs}</p>`;
+                    break;
+                case "fee":
+                    content = `<p>${stationFees}</p>`;
+                    break;
+                case "parking":
+                    content = `<p>${stationParking}</p>`;
+                    break;
+                case "rating":
+                    content = `<p>${stationRating}</p>`;
+                    break;
+            }
 
-        data.features.forEach((feature) => {
-            const [lng, lat] = feature.geometry.coordinates;
+            const popups = document.getElementsByClassName('mapboxgl-popup-content');
+            if (popups.length > 0) {
+                popups[0].innerHTML = `
+                    <h3>${stationName}</h3>
+                    ${content}
+                    <button class="popup-button" onclick="restoreOriginalContent('${stationName}', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Back</button>
+                `;
+            }
+        }
 
-            // Create a custom HTML element for the marker
-            const el = document.createElement('div');
-            el.innerHTML = emoji; // Set the desired emoji as the content
-            el.style.fontSize = '24px'; // You can adjust the size as needed
+        function restoreOriginalContent(stationName, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees) {
+            const popups = document.getElementsByClassName('mapboxgl-popup-content');
+            if (popups.length > 0) {
+                popups[0].innerHTML = generatePopupContent(stationName, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees);
+            }
+        }
 
-            // Create a marker with the custom element and add to the map
-            new mapboxgl.Marker({ element: el })
-                .setLngLat([lng, lat])
-                .setPopup(new mapboxgl.Popup({ offset: 25 })
-                    .setHTML(`<h3>${feature.text}</h3><p>${feature.place_name}</p>`))
-                .addTo(map);
-        });
+        async function getTime(startPoint, endPoint) {
+            if (!startPoint || !endPoint) return;
+
+            const query = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/driving/${startPoint.lng},${startPoint.lat};${endPoint.lng},${endPoint.lat}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
+                { method: 'GET' }
+            );
+            const json = await query.json();
+            const data = json.routes[0];
+            return Math.floor(data.duration / 60); // return duration in minutes
+        }
+
+        async function addPOIs(searchTerm, emoji, latitude, longitude, station_name) {
+            const startPoint = { lat: latitude, lng: longitude }; // This is the point around which POIs are searched
+
+            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchTerm)}.json?type=poi&proximity=${longitude},${latitude}&access_token=${mapboxgl.accessToken}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            for (const feature of data.features) {
+                const [lng, lat] = feature.geometry.coordinates;
+                const endPoint = { lat, lng };
+
+                // Get travel time to this POI
+                const duration = await getTime(startPoint, endPoint);
+
+                // Create a custom HTML element for the marker
+                const el = document.createElement('div');
+                el.innerHTML = emoji; // Set the desired emoji as the content
+                el.style.fontSize = '24px'; // You can adjust the size as needed
+
+                // Create a marker with the custom element and add to the map
+                new mapboxgl.Marker({ element: el })
+                    .setLngLat([lng, lat])
+                    .setPopup(new mapboxgl.Popup({ offset: 25 })
+                        .setHTML(`<h3>${feature.text}</h3><p>${feature.place_name}</p>
+                        <h4>Travel time to ${station_name}: ${duration} min</h4>`))
+                    .addTo(map);
+            }
         }
 
         const pointSource = {
@@ -242,8 +404,8 @@
                     endPoint = null;
                 }
             });
-            addPOIs('grocery', '🛒', chargingStations[0].coordinates[1], chargingStations[0].coordinates[0]);
-            addPOIs('restaurant', '🍴', chargingStations[0].coordinates[1], chargingStations[0].coordinates[0]);
+            //addPOIs('grocery', '🛒', chargingStations[0].coordinates[1], chargingStations[0].coordinates[0]);
+            //addPOIs('restaurant', '🍴', chargingStations[0].coordinates[1], chargingStations[0].coordinates[0]);
             //addPOIs('grocery', '🛒', chargingStations[1].coordinates[1], chargingStations[1].coordinates[0]);
             //addPOIs('restaurant', '🍴', chargingStations[1].coordinates[1], chargingStations[1].coordinates[0]);
             addChargingStations(); // Add the charging stations to the map
