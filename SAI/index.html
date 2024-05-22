@@ -12,69 +12,103 @@
             margin: 0;
             padding: 0;
         }
+
         #map {
             position: absolute;
             top: 0;
             bottom: 0;
             width: 100%;
         }
+
         #manual {
-        position: absolute;
-        left: 20px; /* Changed from right to left */
-        top: 20px;
-        width: 20%;
-        max-height: 30%; /* Adjusted for space and layout */
-        padding: 20px;
-        background-color: #fff;
-        overflow-y: auto;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        font-family: sans-serif;
-        border: 1px solid #ccc;
-    }
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            width: 20%;
+            max-height: 30%;
+            padding: 20px;
+            background-color: #fff;
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: sans-serif;
+            border: 1px solid #ccc;
+        }
 
-    #instructions {
-        position: absolute;
-        left: 20px; /* Align with the manual box */
-        top: calc(40% + 10px); /*30% + 10px /* Positioned below the manual box, adjust based on manual's height */
-        width: 20%; /* Match width with manual box */
-        bottom: 10%; /* Adjust as needed */
-        padding: 20px;
-        background-color: #fff;
-        overflow-y: scroll;
-        font-family: sans-serif;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border: 1px solid #ccc;
-    }
-    .popup-button {
-        background-color: #bbb8b8;
-        color: black;
-        border: none;
-        padding: 8px 16px;
-        margin: 5px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background-color 0.3s;
-        font-family: sans-serif;
-    }
+        #instructions {
+            position: absolute;
+            left: 20px;
+            top: calc(40% + 10px);
+            width: 20%;
+            bottom: 10%;
+            padding: 20px;
+            background-color: #fff;
+            overflow-y: scroll;
+            font-family: sans-serif;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ccc;
+        }
 
-    .popup-button:hover {
-        background-color: #0056b3; /* Darker blue on hover */
-    }
+        #log-box {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 20%;
+            max-height: 30%;
+            padding: 20px;
+            background-color: #fff;
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: sans-serif;
+            border: 1px solid #ccc;
+        }
 
-    .emoji-marker {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 30px;
-        height: 30px;
-        text-align: center;
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        /* background-color: #fff; */
-    }
+        .popup-button {
+            background-color: #bbb8b8;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            font-family: sans-serif;
+        }
+
+        .popup-button:hover {
+            background-color: #0056b3;
+        }
+
+        .emoji-marker {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #copy-button {
+            margin-top: 10px;
+            background-color: #bbb8b8;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            font-family: sans-serif;
+        }
+
+        #copy-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 
@@ -88,12 +122,16 @@
         <p>Click on any station to view more details about it.</p>
         <p>For navigation, simply click on any two points on the map to get the trip duration and route information.</p>
     </div>
+    <div id="log-box">
+        <h3>Click Logs</h3>
+        <button id="copy-button">Copy Logs</button>
+    </div>
     <script>
-        mapboxgl.accessToken = 'pk.eyJ1Ijoiamtvbmc0IiwiYSI6ImNscmp6dnl0ODA5Yncyam8yNnI0MWUwMnEifQ.aOQYe0kncSxZLyYz7J4u-A';
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaGdhem1laCIsImEiOiJjbGx5NzZpc3QwYWZtM2xwcjE3a2J5bjQxIn0.cpUto7a5fO9EgSY2LCjOSQ';
         const map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/navigation-night-v1',
-            center: [-122.64683056159838, 45.545274874832764], 
+            center: [-122.64683056159838, 45.545274874832764],
             zoom: 12
         });
         const bounds = [
@@ -106,6 +144,76 @@
         const endMarker = new mapboxgl.Marker({ color: '#f02' }).setLngLat([-122.663584, 45.523751]).addTo(map);
         let startPoint = null;
         let endPoint = null;
+        let poiMarkers = [];
+
+        const chargingStations = [
+            {
+                coordinates: [-122.62488635696639, 45.54968477818996],
+                imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipMxbI3sgkLQH0icgQW5DEUxg57XsMSVUQBk_l1q=w408-h306-k-no',
+                name: 'Charging Station 1',
+                plugs: 'J1772 (3), CHAdeMO (3), CCS Combo (3)',
+                fees: '$1.00/Hr for first 8 hours, $2.00/Hr for next 12 hours, $1.00/Hr afterwards',
+                parking: 'Free parking',
+                rating: '⭐⭐⭐⭐⭐'
+            },
+            {
+                coordinates: [-122.64454158343236, 45.55990193982297],
+                imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipOk9QNeKXYR4v2l6TcCg1RtpVpW8a8UmRl5yVQ=w408-h544-k-no',
+                name: 'Charging Station 2',
+                plugs: 'J1772 (1), CHAdeMO (2), CCS Combo (1)',
+                fees: 'Free for 30 minutes, $1.50/Hr after',
+                parking: 'Free parking',
+                rating: '⭐⭐⭐'
+            }
+        ];
+
+        const fixedPoint1 = {
+            lat: chargingStations[0].coordinates[1],
+            lng: chargingStations[0].coordinates[0],
+            emoji: '📍'
+        };
+        const fixedPoint2 = {
+            lat: chargingStations[1].coordinates[1],
+            lng: chargingStations[1].coordinates[0],
+            emoji: '📍'
+        };
+
+        function logAction(action) {
+            const logBox = document.getElementById('log-box');
+            const timestamp = new Date().toLocaleTimeString();
+            logBox.innerHTML += `<p>[${timestamp}] ${action}</p>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function copyLogs() {
+            const logBox = document.getElementById('log-box');
+            const logs = Array.from(logBox.getElementsByTagName('p')).map(p => p.textContent).join('\n');
+            const textarea = document.createElement('textarea');
+            textarea.value = logs;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alert('Logs copied to clipboard');
+        }
+
+        document.getElementById('copy-button').addEventListener('click', copyLogs);
+
+        function haversineDistance(coords1, coords2) {
+            const R = 6371; // Radius of the Earth in kilometers
+            const dLat = (coords2[1] - coords1[1]) * Math.PI / 180;
+            const dLon = (coords2[0] - coords1[0]) * Math.PI / 180;
+            const a =
+                0.5 - Math.cos(dLat) / 2 +
+                Math.cos(coords1[1] * Math.PI / 180) * Math.cos(coords2[1] * Math.PI / 180) *
+                (1 - Math.cos(dLon)) / 2;
+            return R * 2 * Math.asin(Math.sqrt(a));
+        }
+
+        function checkBufferZone(clickCoords, targetCoords, bufferRadius) {
+            const distance = haversineDistance(clickCoords, targetCoords);
+            return distance <= bufferRadius;
+        }
 
         async function getRoute() {
             if (!startPoint || !endPoint) return;
@@ -148,7 +256,6 @@
                 });
             }
 
-            // Extract and display routing instructions
             const instructions = document.getElementById('instructions');
             const steps = data.legs[0].steps;
 
@@ -159,41 +266,8 @@
             instructions.innerHTML = `<p><strong>Trip duration: ${Math.floor(
                 data.duration / 60
             )} min 🚗</strong></p><ol>${tripInstructions}</ol>`;
-    }
-
-    
-        const chargingStations = [
-            {
-                coordinates: [-122.62488635696639, 45.54968477818996], // Sample coordinates for the first station , 
-                imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipMxbI3sgkLQH0icgQW5DEUxg57XsMSVUQBk_l1q=w408-h306-k-no', // Image URL for the first station
-                name: 'Charging Station 1',
-                plugs: 'J1772 (3), CHAdeMO (3), CCS Combo (3)',
-                fees: '$1.00/Hr for first 8 hours, $2.00/Hr for next 12 hours, $1.00/Hr afterwards',
-                parking: 'Free parking',
-                // use emoji for the rating 4.5 stars
-                rating: '⭐⭐⭐⭐⭐'
-            },
-            {
-                coordinates: [-122.64454158343236, 45.55990193982297], // Sample coordinates for the second station , 
-                imageUrl: 'https://lh5.googleusercontent.com/p/AF1QipOk9QNeKXYR4v2l6TcCg1RtpVpW8a8UmRl5yVQ=w408-h544-k-no', // Image URL for the second station
-                name: 'Chargin Station 2',
-                plugs: 'J1772 (1), CHAdeMO (2), CCS Combo (1)',
-                fees: 'Free for 30 minutes, $1.50/Hr after',
-                parking: 'Free parking',
-                rating: '⭐⭐⭐'
-            }
-        ];
-
-        const fixedPoint1 = {
-        lat: chargingStations[0].coordinates[1], // Latitude from the first station
-        lng: chargingStations[0].coordinates[0],
-            emoji: '📍'  // Example emoji
-        };
-        const fixedPoint2 = {
-        lat: chargingStations[1].coordinates[1], // Latitude from the second station
-        lng: chargingStations[1].coordinates[0],
-            emoji: '📍'  // Example emoji
-        };
+            logAction(`Route calculated: ${data.legs[0].summary}`);
+        }
 
         function addEmojiMarker(point) {
             if (window.emojiMarker) {
@@ -201,29 +275,26 @@
             }
             const el = document.createElement('div');
             el.className = 'emoji-marker';
-            el.style.fontSize = '24px';  // Set the font size for the emoji
+            el.style.fontSize = '24px';
             el.innerHTML = point.emoji;
             const popup = new mapboxgl.Popup({ offset: 25 })
                 .setHTML(`<h4>Fixed Point Information</h4><p>This is a fixed point marked by an emoji 📍 on the map.</p>`);
             window.emojiMarker = new mapboxgl.Marker({ element: el })
                 .setLngLat([point.lng, point.lat])
-                .setPopup(popup)  // Attach the popup to the marker
+                .setPopup(popup)
                 .addTo(map);
             window.emojiMarker.getPopup().open();
+            logAction(`Emoji marker added at: ${point.lng}, ${point.lat}`);
         }
-        
+
         function addEmojiMarkerWithFeedback(point, stationName, plugs, encodedImageUrl, buttonElement, poi_type) {
-            // set poi emoji to be 🍴 if poi_type is restaurant
             const poi_emoji = poi_type === 'restaurant' ? '🍴' : '🛒';
-            // Use the station's location to fetch and display nearby restaurants
             addPOIs(poi_type, '🍴', point.lat, point.lng, stationName);
 
-            // Update the popup content to show that POIs are being added to the map
             const newPopupContent = `
                 <p>Nearby ${poi_type}s added to the map! ${poi_emoji}</p>
             `;
-            
-            // Remove the previous popup and display updated information
+
             if (window.currentPopup) {
                 window.currentPopup.remove();
             }
@@ -234,10 +305,10 @@
                     .setLngLat(coordinates)
                     .setHTML(newPopupContent)
                     .addTo(map);
-                window.currentPopup = newPopup; // Store reference to new popup
+                window.currentPopup = newPopup;
             }
+            logAction(`Nearby ${poi_type}s added for ${stationName}`);
         }
-
 
         function addChargingStations() {
             chargingStations.forEach(station => {
@@ -252,12 +323,14 @@
                 new mapboxgl.Marker({ element: el })
                     .setLngLat(station.coordinates)
                     .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
-                    .addTo(map);
+                    .addTo(map)
+                    .on('click', () => {
+                        logAction(`Charging station clicked: ${station.name}`);
+                    });
             });
         }
 
         function generatePopupContent(stationName, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees) {
-            // if the station name is equall to the first station name, then return the first station position
             if (stationName === chargingStations[0].name) {
                 fixedPoint = fixedPoint1;
             } else {
@@ -270,12 +343,13 @@
                 <button class="popup-button" onclick="showMoreInfo('${stationName}', 'fee', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Charging Fee</button>
                 <button class="popup-button" onclick="showMoreInfo('${stationName}', 'parking', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Parking</button>
                 <button class="popup-button" onclick="showMoreInfo('${stationName}', 'rating', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Users Rating</button>
-    
                 <button class="popup-button" onclick="addEmojiMarkerWithFeedback(fixedPoint, '${stationName}', '${plugs}', '${encodedImageUrl}', this, 'restaurant')">Show Nearby Restaurants</button>
                 `;
         }
 
         function showMoreInfo(stationName, infoType, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees) {
+            logAction(`Button clicked: ${infoType} for ${stationName}`);
+
             let content = "";
             switch (infoType) {
                 case "chargers":
@@ -307,6 +381,7 @@
             if (popups.length > 0) {
                 popups[0].innerHTML = generatePopupContent(stationName, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees);
             }
+            logAction(`Back button clicked for ${stationName}`);
         }
 
         async function getTime(startPoint, endPoint) {
@@ -318,11 +393,13 @@
             );
             const json = await query.json();
             const data = json.routes[0];
-            return Math.floor(data.duration / 60); // return duration in minutes
+            return Math.floor(data.duration / 60);
         }
 
         async function addPOIs(searchTerm, emoji, latitude, longitude, station_name) {
-            const startPoint = { lat: latitude, lng: longitude }; // This is the point around which POIs are searched
+            logAction(`Adding POIs for ${station_name} - ${searchTerm}`);
+
+            const startPoint = { lat: latitude, lng: longitude };
 
             const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchTerm)}.json?type=poi&proximity=${longitude},${latitude}&access_token=${mapboxgl.accessToken}`;
             const response = await fetch(url);
@@ -332,21 +409,23 @@
                 const [lng, lat] = feature.geometry.coordinates;
                 const endPoint = { lat, lng };
 
-                // Get travel time to this POI
                 const duration = await getTime(startPoint, endPoint);
 
-                // Create a custom HTML element for the marker
                 const el = document.createElement('div');
-                el.innerHTML = emoji; // Set the desired emoji as the content
-                el.style.fontSize = '24px'; // You can adjust the size as needed
+                el.innerHTML = emoji;
+                el.style.fontSize = '24px';
 
-                // Create a marker with the custom element and add to the map
-                new mapboxgl.Marker({ element: el })
+                const marker = new mapboxgl.Marker({ element: el })
                     .setLngLat([lng, lat])
                     .setPopup(new mapboxgl.Popup({ offset: 25 })
                         .setHTML(`<h3>${feature.text}</h3><p>${feature.place_name}</p>
                         <h4>Travel time to ${station_name}: ${duration} min</h4>`))
-                    .addTo(map);
+                    .addTo(map)
+                    .on('click', () => {
+                        logAction(`POI clicked: ${feature.text}`);
+                    });
+
+                poiMarkers.push({ marker, coordinates: [lng, lat], logMessage: `Clicked within buffer zone of POI: ${feature.text}` });
             }
         }
 
@@ -358,7 +437,7 @@
                     {
                         type: 'Feature',
                         properties: {
-                            title: 'Start' // Use this in the symbol layer to display the text
+                            title: 'Start'
                         },
                         geometry: {
                             type: 'Point',
@@ -377,36 +456,68 @@
                     {
                         type: 'Feature',
                         properties: {
-                            title: 'End' // Use this in the symbol layer to display the text
+                            title: 'End'
                         },
                         geometry: {
                             type: 'Point',
-                            coordinates: [-122.59626181271541, 45.56511868081539] 
+                            coordinates: [-122.59626181271541, 45.56511868081539]
                         }
                     }
                 ]
             }
         };
+
         map.on('load', () => {
             map.on('click', (event) => {
-                const coords = [event.lngLat.lng, event.lngLat.lat];
-                
+                const clickCoords = [event.lngLat.lng, event.lngLat.lat];
+                logAction(`Map clicked at coordinates: ${clickCoords}`);
+
+                const bufferRadius = 0.1; // Buffer radius in kilometers
+
+                if (checkBufferZone(clickCoords, [-122.662323, 45.523751], bufferRadius)) {
+                    logAction(`Clicked within buffer zone of start point`);
+                }
+                if (checkBufferZone(clickCoords, [-122.59626181271541, 45.56511868081539], bufferRadius)) {
+                    logAction(`Clicked within buffer zone of end point`);
+                }
+
+                chargingStations.forEach(station => {
+                    if (checkBufferZone(clickCoords, station.coordinates, bufferRadius)) {
+                        logAction(`Clicked within buffer zone of ${station.name}`);
+                    }
+                });
+
+                poiMarkers.forEach(poi => {
+                    if (checkBufferZone(clickCoords, poi.coordinates, bufferRadius)) {
+                        logAction(poi.logMessage);
+                    }
+                });
+
                 if (!startPoint) {
-                    startPoint = coords;
-                    startMarker.setLngLat(coords);
+                    startPoint = clickCoords;
+                    startMarker.setLngLat(clickCoords);
+                    logAction(`Start point set at: ${clickCoords}`);
                 } else {
-                    endPoint = coords;
-                    endMarker.setLngLat(coords);
+                    endPoint = clickCoords;
+                    endMarker.setLngLat(clickCoords);
+                    logAction(`End point set at: ${clickCoords}`);
                     getRoute();
 
-                    // Reset for next route
                     startPoint = null;
                     endPoint = null;
                 }
             });
-            addChargingStations(); // Add the charging stations to the map
 
-            // Add starting point to the map
+            startMarker.getElement().addEventListener('click', () => {
+                logAction(`Start marker clicked at: ${startMarker.getLngLat()}`);
+            });
+
+            endMarker.getElement().addEventListener('click', () => {
+                logAction(`End marker clicked at: ${endMarker.getLngLat()}`);
+            });
+
+            addChargingStations();
+
             map.addLayer({
                 id: 'point',
                 type: 'circle',
@@ -421,17 +532,16 @@
                 type: 'symbol',
                 source: pointSource,
                 layout: {
-                    'text-field': '{title}', // Use the title from the properties
+                    'text-field': '{title}',
                     'text-size': 24,
                     'text-anchor': 'left',
-                    'text-offset': [0.8, 0] // Adjust text position relative to the point
+                    'text-offset': [0.8, 0]
                 },
                 paint: {
                     'text-color': 'white'
                 }
             });
 
-            // Add endpoint to the map
             map.addLayer({
                 id: 'endpoint',
                 type: 'circle',
@@ -446,10 +556,10 @@
                 type: 'symbol',
                 source: endpointsource,
                 layout: {
-                    'text-field': '{title}', // Use the title from the properties
+                    'text-field': '{title}',
                     'text-size': 24,
                     'text-anchor': 'left',
-                    'text-offset': [0.8, 0] // Adjust text position relative to the point
+                    'text-offset': [0.8, 0]
                 },
                 paint: {
                     'text-color': 'white'
@@ -458,4 +568,5 @@
         });
     </script>
 </body>
+
 </html>
