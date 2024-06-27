@@ -20,36 +20,6 @@
             width: 100%;
         }
 
-        #manual {
-            position: absolute;
-            left: 20px;
-            top: 20px;
-            width: 20%;
-            max-height: 30%;
-            padding: 20px;
-            background-color: #fff;
-            overflow-y: auto;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            font-family: sans-serif;
-            border: 1px solid #ccc;
-        }
-
-        #instructions {
-            position: absolute;
-            left: 20px;
-            top: calc(40% + 10px);
-            width: 20%;
-            bottom: 10%;
-            padding: 20px;
-            background-color: #fff;
-            overflow-y: scroll;
-            font-family: sans-serif;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border: 1px solid #ccc;
-        }
-
         #log-box {
             position: absolute;
             right: 20px;
@@ -114,14 +84,6 @@
 
 <body>
     <div id='map'></div>
-    <div id="instructions"></div>
-    <div id="manual">
-        <h3>Map Guide</h3>
-        <p>This map displays pre-set start and end points for your trip.</p>
-        <p>Look for the ⚡ symbol to find two available charging stations along your route.</p>
-        <p>Click on any station to view more details about it.</p>
-        <p>For navigation, simply click on any two points on the map to get the trip duration and route information.</p>
-    </div>
     <div id="log-box">
         <h3>Click Logs</h3>
         <button id="copy-button">Copy Logs</button>
@@ -140,11 +102,8 @@
         ];
         map.setMaxBounds(bounds);
 
-        const startMarker = new mapboxgl.Marker({ color: '#3887be' }).setLngLat([-122.662323, 45.523751]).addTo(map);
-        const endMarker = new mapboxgl.Marker({ color: '#f02' }).setLngLat([-122.663584, 45.523751]).addTo(map);
-        let startPoint = null;
-        let endPoint = null;
         let poiMarkers = [];
+        let allPopups = [];
 
         const chargingStations = [
             {
@@ -215,58 +174,9 @@
             return distance <= bufferRadius;
         }
 
-        async function getRoute() {
-            if (!startPoint || !endPoint) return;
-
-            const query = await fetch(
-                `https://api.mapbox.com/directions/v5/mapbox/driving/${startPoint[0]},${startPoint[1]};${endPoint[0]},${endPoint[1]}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
-                { method: 'GET' }
-            );
-            const json = await query.json();
-            const data = json.routes[0];
-            const route = data.geometry.coordinates;
-            const geojson = {
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                    type: 'LineString',
-                    coordinates: route
-                }
-            };
-
-            if (map.getSource('route')) {
-                map.getSource('route').setData(geojson);
-            } else {
-                map.addLayer({
-                    id: 'route',
-                    type: 'line',
-                    source: {
-                        type: 'geojson',
-                        data: geojson
-                    },
-                    layout: {
-                        'line-join': 'round',
-                        'line-cap': 'round'
-                    },
-                    paint: {
-                        'line-color': '#3887be',
-                        'line-width': 5,
-                        'line-opacity': 0.75
-                    }
-                });
-            }
-
-            const instructions = document.getElementById('instructions');
-            const steps = data.legs[0].steps;
-
-            let tripInstructions = '';
-            for (const step of steps) {
-                tripInstructions += `<li>${step.maneuver.instruction}</li>`;
-            }
-            instructions.innerHTML = `<p><strong>Trip duration: ${Math.floor(
-                data.duration / 60
-            )} min 🚗</strong></p><ol>${tripInstructions}</ol>`;
-            logAction(`Route calculated: ${data.legs[0].summary}`);
+        function closeAllPopups() {
+            allPopups.forEach(popup => popup.remove());
+            allPopups = [];
         }
 
         function addEmojiMarker(point) {
@@ -287,17 +197,18 @@
             logAction(`Emoji marker added at: ${point.lng}, ${point.lat}`);
         }
 
-        function addEmojiMarkerWithFeedback(point, stationName, plugs, encodedImageUrl, buttonElement, poi_type) {
+        async function addEmojiMarkerWithFeedback(point, stationName, plugs, encodedImageUrl, buttonElement, poi_type) {
             const poi_emoji = poi_type === 'restaurant' ? '🍴' : '🛒';
-            addPOIs(poi_type, '🍴', point.lat, point.lng, stationName);
+            const poiList = await addPOIs(poi_type, point.lat, point.lng, stationName);
 
-            const newPopupContent = `
-                <p>Nearby ${poi_type}s added to the map! ${poi_emoji}</p>
-            `;
+            let newPopupContent = `<p>Nearby ${poi_type}s:</p><ul>`;
+            poiList.forEach(poi => {
+                newPopupContent += `<li>${poi.name} - ${poi.distance} min away</li>`;
+            });
+            newPopupContent += `</ul>`;
 
-            if (window.currentPopup) {
-                window.currentPopup.remove();
-            }
+            closeAllPopups(); // Close all existing popups
+
             const el = buttonElement.closest('.mapboxgl-popup');
             if (el) {
                 const coordinates = new mapboxgl.LngLat(point.lng, point.lat);
@@ -305,6 +216,7 @@
                     .setLngLat(coordinates)
                     .setHTML(newPopupContent)
                     .addTo(map);
+                allPopups.push(newPopup); // Track the new popup
                 window.currentPopup = newPopup;
             }
             logAction(`Nearby ${poi_type}s added for ${stationName}`);
@@ -320,17 +232,21 @@
                 const encodedImageUrl = encodeURIComponent(station.imageUrl);
                 const popupContent = generatePopupContent(station.name, station.plugs, encodedImageUrl, station.coordinates, station.rating, station.parking, station.fees);
 
-                new mapboxgl.Marker({ element: el })
+                const marker = new mapboxgl.Marker({ element: el })
                     .setLngLat(station.coordinates)
                     .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
                     .addTo(map)
                     .on('click', () => {
+                        closeAllPopups(); // Close all existing popups
+                        const newPopup = marker.getPopup();
+                        allPopups.push(newPopup); // Track the new popup
                         logAction(`Charging station clicked: ${station.name}`);
                     });
             });
         }
 
         function generatePopupContent(stationName, plugs, encodedImageUrl, stationPosition, stationRating, stationParking, stationFees) {
+            let fixedPoint;
             if (stationName === chargingStations[0].name) {
                 fixedPoint = fixedPoint1;
             } else {
@@ -343,7 +259,7 @@
                 <button class="popup-button" onclick="showMoreInfo('${stationName}', 'fee', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Charging Fee</button>
                 <button class="popup-button" onclick="showMoreInfo('${stationName}', 'parking', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Parking</button>
                 <button class="popup-button" onclick="showMoreInfo('${stationName}', 'rating', '${plugs}', '${encodedImageUrl}', '${stationPosition}', '${stationRating}', '${stationParking}', '${stationFees}')">Users Rating</button>
-                <button class="popup-button" onclick="addEmojiMarkerWithFeedback(fixedPoint, '${stationName}', '${plugs}', '${encodedImageUrl}', this, 'restaurant')">Show Nearby Restaurants</button>
+                <button class="popup-button" onclick="addEmojiMarkerWithFeedback(${JSON.stringify(fixedPoint)}, '${stationName}', '${plugs}', '${encodedImageUrl}', this, 'restaurant')">Show Nearby Restaurants</button>
                 `;
         }
 
@@ -396,14 +312,15 @@
             return Math.floor(data.duration / 60);
         }
 
-        async function addPOIs(searchTerm, emoji, latitude, longitude, station_name) {
+        async function addPOIs(searchTerm, latitude, longitude, station_name) {
             logAction(`Adding POIs for ${station_name} - ${searchTerm}`);
 
             const startPoint = { lat: latitude, lng: longitude };
-
             const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchTerm)}.json?type=poi&proximity=${longitude},${latitude}&access_token=${mapboxgl.accessToken}`;
             const response = await fetch(url);
             const data = await response.json();
+
+            let poiList = [];
 
             for (const feature of data.features) {
                 const [lng, lat] = feature.geometry.coordinates;
@@ -411,22 +328,10 @@
 
                 const duration = await getTime(startPoint, endPoint);
 
-                const el = document.createElement('div');
-                el.innerHTML = emoji;
-                el.style.fontSize = '24px';
-
-                const marker = new mapboxgl.Marker({ element: el })
-                    .setLngLat([lng, lat])
-                    .setPopup(new mapboxgl.Popup({ offset: 25 })
-                        .setHTML(`<h3>${feature.text}</h3><p>${feature.place_name}</p>
-                        <h4>Travel time to ${station_name}: ${duration} min</h4>`))
-                    .addTo(map)
-                    .on('click', () => {
-                        logAction(`POI clicked: ${feature.text}`);
-                    });
-
-                poiMarkers.push({ marker, coordinates: [lng, lat], logMessage: `Clicked within buffer zone of POI: ${feature.text}` });
+                poiList.push({ name: feature.text, distance: duration });
             }
+
+            return poiList;
         }
 
         const pointSource = {
@@ -469,17 +374,11 @@
 
         map.on('load', () => {
             map.on('click', (event) => {
+                closeAllPopups(); // Close all existing popups when clicking on the map
                 const clickCoords = [event.lngLat.lng, event.lngLat.lat];
                 logAction(`Map clicked at coordinates: ${clickCoords}`);
 
                 const bufferRadius = 0.1; // Buffer radius in kilometers
-
-                if (checkBufferZone(clickCoords, [-122.662323, 45.523751], bufferRadius)) {
-                    logAction(`Clicked within buffer zone of start point`);
-                }
-                if (checkBufferZone(clickCoords, [-122.59626181271541, 45.56511868081539], bufferRadius)) {
-                    logAction(`Clicked within buffer zone of end point`);
-                }
 
                 chargingStations.forEach(station => {
                     if (checkBufferZone(clickCoords, station.coordinates, bufferRadius)) {
@@ -492,41 +391,10 @@
                         logAction(poi.logMessage);
                     }
                 });
-
-                if (!startPoint) {
-                    startPoint = clickCoords;
-                    startMarker.setLngLat(clickCoords);
-                    logAction(`Start point set at: ${clickCoords}`);
-                } else {
-                    endPoint = clickCoords;
-                    endMarker.setLngLat(clickCoords);
-                    logAction(`End point set at: ${clickCoords}`);
-                    getRoute();
-
-                    startPoint = null;
-                    endPoint = null;
-                }
-            });
-
-            startMarker.getElement().addEventListener('click', () => {
-                logAction(`Start marker clicked at: ${startMarker.getLngLat()}`);
-            });
-
-            endMarker.getElement().addEventListener('click', () => {
-                logAction(`End marker clicked at: ${endMarker.getLngLat()}`);
             });
 
             addChargingStations();
 
-            map.addLayer({
-                id: 'point',
-                type: 'circle',
-                source: pointSource,
-                paint: {
-                    'circle-radius': 15,
-                    'circle-color': '#3887be'
-                }
-            });
             map.addLayer({
                 id: 'point-label',
                 type: 'symbol',
@@ -534,23 +402,15 @@
                 layout: {
                     'text-field': '{title}',
                     'text-size': 24,
+                    'text-font': ['DIN Offc Pro Bold', 'Arial Unicode MS Bold'],
                     'text-anchor': 'left',
                     'text-offset': [0.8, 0]
                 },
                 paint: {
-                    'text-color': 'white'
+                    'text-color': 'blue'
                 }
             });
 
-            map.addLayer({
-                id: 'endpoint',
-                type: 'circle',
-                source: endpointsource,
-                paint: {
-                    'circle-radius': 15,
-                    'circle-color': '#f02'
-                }
-            });
             map.addLayer({
                 id: 'endpoint-label',
                 type: 'symbol',
@@ -558,11 +418,12 @@
                 layout: {
                     'text-field': '{title}',
                     'text-size': 24,
+                    'text-font': ['DIN Offc Pro Bold', 'Arial Unicode MS Bold'],
                     'text-anchor': 'left',
                     'text-offset': [0.8, 0]
                 },
                 paint: {
-                    'text-color': 'white'
+                    'text-color': 'red'
                 }
             });
         });
