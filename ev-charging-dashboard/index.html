@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Charging Accessibility Dashboard</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Mapbox GL JS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
+
+    <!-- Mapbox GL Compare -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header id="header">
+        <div class="header-content">
+            <h1>EV Charging Accessibility Dashboard</h1>
+            <p class="subtitle">Comparing Distance Accessibility vs. Visit Accessibility across U.S. Metro Areas</p>
+        </div>
+    </header>
+
+    <!-- Metro Selector -->
+    <div id="metro-selector">
+        <label for="metro-select">Metro Area</label>
+        <select id="metro-select"></select>
+    </div>
+
+    <!-- Zip Code Lookup -->
+    <div id="zip-panel">
+        <label for="zip-input">Find a Nearby Block Group</label>
+        <div class="zip-input-row">
+            <input type="text" id="zip-input" placeholder="Enter zip code" maxlength="5" />
+            <button id="zip-go">Go</button>
+        </div>
+        <div id="zip-results" class="zip-results hidden">
+            <div id="zip-geoid" class="zip-geoid"></div>
+            <p id="zip-desc-dist" class="zip-desc"></p>
+            <p id="zip-desc-visit" class="zip-desc"></p>
+            <div class="zip-colorbar-wrap">
+                <div class="zip-colorbar">
+                    <div id="zip-marker-dist" class="zip-marker">
+                        <span class="zip-marker-arrow">&#9660;</span>
+                        <span class="zip-marker-label">D</span>
+                    </div>
+                    <div id="zip-marker-visit" class="zip-marker">
+                        <span class="zip-marker-arrow">&#9650;</span>
+                        <span class="zip-marker-label">V</span>
+                    </div>
+                </div>
+                <div class="zip-colorbar-labels">
+                    <span>0</span>
+                    <span>50</span>
+                    <span>100</span>
+                </div>
+            </div>
+            <div class="zip-legend-row">
+                <span class="zip-legend-item"><span class="zip-legend-swatch" id="zip-swatch-dist"></span>Distance</span>
+                <span class="zip-legend-item"><span class="zip-legend-swatch" id="zip-swatch-visit"></span>Visit</span>
+            </div>
+
+            <!-- PCS Station Details -->
+            <div id="pcs-details" class="pcs-details">
+                <div class="pcs-section-title">Charging Stations</div>
+
+                <div class="pcs-card pcs-card-dist">
+                    <div class="pcs-card-header">
+                        <span class="pcs-card-icon">&#9679;</span>
+                        <span class="pcs-card-label">Closest Station</span>
+                    </div>
+                    <div id="pcs-dist-info" class="pcs-card-body">
+                        <span class="pcs-no-data">No data available</span>
+                    </div>
+                </div>
+
+                <div class="pcs-card pcs-card-visit">
+                    <div class="pcs-card-header">
+                        <span class="pcs-card-icon">&#9679;</span>
+                        <span class="pcs-card-label">Most Visited Station</span>
+                    </div>
+                    <div id="pcs-visit-info" class="pcs-card-body">
+                        <span class="pcs-no-data">No data available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="zip-error" class="zip-error hidden"></div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <span>Loading data...</span>
+    </div>
+
+    <!-- Map container -->
+    <div id="comparison-container">
+        <div id="left-map" class="map"></div>
+        <div id="right-map" class="map"></div>
+    </div>
+
+    <!-- Swipe labels -->
+    <div id="left-label" class="swipe-label">Distance Accessibility</div>
+    <div id="right-label" class="swipe-label">Visit Accessibility</div>
+
+    <!-- Legends -->
+    <div id="legend-left" class="legend">
+        <h4>Metro Wide Percentile</h4>
+        <div class="legend-items"></div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Info Button -->
+    <button id="info-btn" aria-label="About this dashboard">?</button>
+
+    <!-- Info Modal -->
+    <div id="info-overlay" class="info-overlay hidden">
+        <div id="info-modal" class="info-modal">
+            <button id="info-close" class="info-close" aria-label="Close">&times;</button>
+            <h2 class="info-title">About This Dashboard</h2>
+            <p class="info-version">January 2024 &middot; v1.0</p>
+
+            <div class="info-section">
+                <h3>How to Use</h3>
+                <ol class="info-steps">
+                    <li><strong>Select a metro area</strong> from the dropdown in the top-left corner.</li>
+                    <li><strong>Search by zip code</strong> or <strong>click directly on the map</strong> to select a neighborhood.</li>
+                    <li>Use the <strong>swipe handle</strong> in the center to compare the two accessibility maps side by side.</li>
+                </ol>
+            </div>
+
+            <div class="info-section">
+                <h3>What You Are Seeing</h3>
+                <p>Each colored area on the map is a <strong>Census Block Group</strong> (CBG) &mdash; a small geographic unit used by the U.S. Census Bureau, typically containing 600&ndash;3,000 people.</p>
+                <p>Colors represent metro-wide percentile ranks from <span class="info-color-low">red (low access)</span> through white to <span class="info-color-high">green (high access)</span>.</p>
+            </div>
+
+            <div class="info-section">
+                <h3>Two Accessibility Metrics</h3>
+                <div class="info-metric">
+                    <strong>Distance Accessibility</strong> &mdash; measures how close residents are to public charging stations. A higher percentile means shorter distances to chargers compared to other block groups in the metro.
+                </div>
+                <div class="info-metric">
+                    <strong>Visit Accessibility</strong> &mdash; measures how often residents encounter public chargers during their daily routines, based on anonymized mobility data. A higher percentile means residents are more likely to pass by charging stations in their regular activities.
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>Station Details</h3>
+                <p>When you select a block group, the panel shows the <strong>closest charging station</strong> (with distance) and the <strong>most-visited station</strong> (with visit share and nearby points of interest).</p>
+            </div>
+
+            <div class="info-section info-footer">
+                <p>Data covers 20 major U.S. metropolitan areas. More information coming soon.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile warning -->
+    <div id="mobile-warning">
+        <p>This dashboard is best viewed on a desktop or tablet in landscape mode.</p>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

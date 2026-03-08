@@ -1,0 +1,23 @@
+# API keys and secrets
+**/config.js
+!**/config.example.js
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Processing scripts and raw data (not needed for site)
+scripts/
+*.zip

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hossein Gazmeh</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 64px 24px 60px;
+        }
+
+        /* ── Hero ── */
+        .hero {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+            margin-bottom: 48px;
+        }
+
+        .hero-photo {
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(148, 163, 184, 0.2);
+            flex-shrink: 0;
+        }
+
+        .hero-text h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+            margin-bottom: 6px;
+        }
+
+        .hero-text .role {
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .hero-links {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .hero-links a {
+            color: #60a5fa;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.15s;
+        }
+
+        .hero-links a:hover { color: #93c5fd; }
+
+        .hero-links .sep {
+            color: #334155;
+            user-select: none;
+        }
+
+        /* ── Sections ── */
+        .section { margin-bottom: 40px; }
+
+        .section-title {
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .section p, .section li {
+            color: #cbd5e1;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .bio { margin-bottom: 0; }
+
+        /* ── Education ── */
+        .edu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 10px;
+            gap: 16px;
+        }
+
+        .edu-item .degree {
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .edu-item .school {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-top: 1px;
+        }
+
+        .edu-item .year {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* ── Experience ── */
+        .exp-item { margin-bottom: 24px; }
+
+        .exp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 16px;
+            margin-bottom: 4px;
+        }
+
+        .exp-header .title {
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .exp-header .dates {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .exp-item .org {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .exp-item ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .exp-item li {
+            padding-left: 14px;
+            position: relative;
+            margin-bottom: 6px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .exp-item li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 9px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #475569;
+        }
+
+        .exp-item li strong {
+            color: #e2e8f0;
+            font-weight: 600;
+        }
+
+        /* ── Skills ── */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .skill-group label {
+            display: block;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 4px;
+        }
+
+        .skill-group span {
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* ── Projects ── */
+        .projects {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .project-card {
+            display: block;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 12px;
+            padding: 20px 24px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+        }
+
+        .project-card:hover {
+            background: rgba(30, 41, 59, 0.85);
+            border-color: rgba(148, 163, 184, 0.22);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .project-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .project-card h3 .arrow {
+            color: #64748b;
+            transition: transform 0.2s, color 0.2s;
+            font-size: 14px;
+        }
+
+        .project-card:hover h3 .arrow {
+            transform: translateX(4px);
+            color: #60a5fa;
+        }
+
+        .project-card p {
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .project-card .tags {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        /* ── Achievements ── */
+        .achievements-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .achievements-list li {
+            padding-left: 14px;
+            position: relative;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .achievements-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 9px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #475569;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            margin-top: 48px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(148, 163, 184, 0.08);
+            color: #475569;
+            font-size: 12px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            .hero {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+            .hero-links { justify-content: center; }
+            .skills-grid { grid-template-columns: 1fr; }
+            .edu-item { flex-direction: column; gap: 2px; }
+            .exp-header { flex-direction: column; gap: 2px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Hero -->
+        <div class="hero">
+            <img src="assets/headshot.jpg" alt="Hossein Gazmeh" class="hero-photo">
+            <div class="hero-text">
+                <h1>Hossein Gazmeh</h1>
+                <div class="role">PhD Candidate in Transportation Engineering &middot; Rice University</div>
+                <div class="hero-links">
+                    <a href="mailto:hgazmeh@rice.edu">hgazmeh@rice.edu</a>
+                    <span class="sep">|</span>
+                    <a href="https://linkedin.com/in/hossein-gazmeh" target="_blank" rel="noopener">LinkedIn</a>
+                    <span class="sep">|</span>
+                    <a href="https://scholar.google.com/citations?user=YOUR_ID" target="_blank" rel="noopener">Google Scholar</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- About -->
+        <div class="section">
+            <div class="section-title">About</div>
+            <p class="bio">I build analytical pipelines that integrate large-scale mobility, economic, environmental, and demographic datasets to evaluate energy infrastructure deployment and community risk. My work spans causal inference, geospatial analytics, NLP, and statistical modeling &mdash; with a focus on understanding who benefits from infrastructure and who gets left behind.</p>
+        </div>
+
+        <!-- Education -->
+        <div class="section">
+            <div class="section-title">Education</div>
+            <div class="edu-item">
+                <div>
+                    <div class="degree">PhD in Transportation Engineering</div>
+                    <div class="school">Rice University, Houston, TX &middot; GPA 4.0/4.0</div>
+                </div>
+                <div class="year">Dec 2026</div>
+            </div>
+            <div class="edu-item">
+                <div>
+                    <div class="degree">BSc in Industrial Engineering</div>
+                    <div class="school">Amirkabir University of Technology, Tehran, Iran &middot; GPA 18/20</div>
+                </div>
+                <div class="year">2021</div>
+            </div>
+        </div>
+
+        <!-- Experience -->
+        <div class="section">
+            <div class="section-title">Experience</div>
+
+            <div class="exp-item">
+                <div class="exp-header">
+                    <span class="title">Graduate Research Assistant</span>
+                    <span class="dates">2024 &ndash; Present</span>
+                </div>
+                <div class="org">Rice University, Dept. of Civil and Environmental Engineering &middot; Houston, TX</div>
+                <ul>
+                    <li><strong>Non-Technical Risk Modeling:</strong> Quantified how economic, environmental, and public acceptance factors create hidden deployment risks across ~50% of national charging stations.</li>
+                    <li><strong>Social Influence on Adoption:</strong> Nonlinear causal discovery revealing infrastructure acts as an amplifier (41.8% mediated effect), with adoption shaped more by social exposure than functional utility.</li>
+                    <li><strong>Economic Resilience Modeling:</strong> Pipelines covering 100% of CA's commercial network showing commercially dependent communities experience 28&ndash;43% greater revenue exposure during outages.</li>
+                    <li><strong>Urban Mobility Disruption Detection:</strong> End-to-end anomaly detection with LLM-RAG attribution across 50 metro areas, quantifying cascading impacts from events like Winter Storm Elliott.</li>
+                </ul>
+            </div>
+
+            <div class="exp-item">
+                <div class="exp-header">
+                    <span class="title">Graduate Research Assistant</span>
+                    <span class="dates">2022 &ndash; 2024</span>
+                </div>
+                <div class="org">Alabama Transportation Institute &middot; Tuscaloosa, AL</div>
+                <ul>
+                    <li><strong>Social Exclusion from Infrastructure:</strong> Built geospatial pipelines identifying 23% of census tracts in Birmingham with compounding exclusion, affecting ~148,000 residents.</li>
+                    <li><strong>Grid Failure Cascading Impact:</strong> Simulation framework modeling how 12-hour grid outages disrupt 67% of fixed-route transit within 4 hours.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Skills -->
+        <div class="section">
+            <div class="section-title">Technical Skills</div>
+            <div class="skills-grid">
+                <div class="skill-group">
+                    <label>Programming</label>
+                    <span>Python, R, SQL, Julia, MATLAB</span>
+                </div>
+                <div class="skill-group">
+                    <label>ML / AI / Stats</label>
+                    <span>Causal Discovery, NLP, DoubleML, DiD, RAG</span>
+                </div>
+                <div class="skill-group">
+                    <label>Geospatial & Data</label>
+                    <span>GeoPandas, ArcGIS, OSMnx, Mapbox, GTFS</span>
+                </div>
+                <div class="skill-group">
+                    <label>Modeling</label>
+                    <span>Pipeline Dev, Simulation, Experimental Design</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Projects -->
+        <div class="section">
+            <div class="section-title">Interactive Projects</div>
+            <div class="projects">
+                <a href="ev-charging-dashboard/" class="project-card">
+                    <h3>EV Charging Accessibility Dashboard <span class="arrow">&rarr;</span></h3>
+                    <p>Interactive swipe-map comparing distance-based and visit-based accessibility to public EV charging stations across 20 major U.S. metro areas.</p>
+                    <div class="tags">
+                        <span class="tag">Mapbox GL JS</span>
+                        <span class="tag">EV Infrastructure</span>
+                        <span class="tag">Mobility Data</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Achievements -->
+        <div class="section">
+            <div class="section-title">Achievements & Leadership</div>
+            <ul class="achievements-list">
+                <li><strong>Graduate Student Award</strong> &mdash; American Society of Highway Engineers</li>
+                <li><strong>Best Poster Award</strong> &mdash; High-Performance Computing Conference</li>
+                <li><strong>Energy HPC Fellowship</strong> &mdash; Ken Kennedy Institute</li>
+                <li>Mentored 4 undergraduates across departments through the Rice SURF program (all presented at conferences)</li>
+                <li>Judge for the Rice Research Symposium; member of TRB, ASCE, ASHE, and ITE</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2024 Hossein Gazmeh</p>
+        </div>
+    </div>
+</body>
+</html>
