@@ -100,6 +100,8 @@
         }
 
         .bio { margin-bottom: 0; }
+        .bio a { color: #60a5fa; text-decoration: none; transition: color 0.15s; }
+        .bio a:hover { color: #93c5fd; }
 
         /* ── Education ── */
         .edu-item {
@@ -157,6 +159,13 @@
             color: #94a3b8;
             font-size: 13px;
             margin-bottom: 8px;
+        }
+
+        .section .exp-desc {
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-bottom: 6px;
         }
 
         .exp-item ul {
@@ -305,6 +314,37 @@
             background: #475569;
         }
 
+        /* ── What's New ── */
+        .news-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .news-list li {
+            padding-left: 14px;
+            position: relative;
+            margin-bottom: 10px;
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .news-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 9px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: #475569;
+        }
+
+        .news-list a { color: #60a5fa; text-decoration: none; transition: color 0.15s; }
+        .news-list a:hover { color: #93c5fd; }
+
+        .news-date { color: #64748b; }
+
         /* ── Footer ── */
         .footer {
             margin-top: 48px;
@@ -336,13 +376,13 @@
             <img src="assets/headshot.jpg" alt="Hossein Gazmeh" class="hero-photo">
             <div class="hero-text">
                 <h1>Hossein Gazmeh</h1>
-                <div class="role">PhD Candidate in Transportation Engineering &middot; Rice University</div>
+                <div class="role">PhD Student in Transportation Engineering &middot; Rice University</div>
                 <div class="hero-links">
                     <a href="mailto:hgazmeh@rice.edu">hgazmeh@rice.edu</a>
                     <span class="sep">|</span>
-                    <a href="https://linkedin.com/in/hossein-gazmeh" target="_blank" rel="noopener">LinkedIn</a>
+                    <a href="https://www.linkedin.com/in/hossein-gazmeh/" target="_blank" rel="noopener">LinkedIn</a>
                     <span class="sep">|</span>
-                    <a href="https://scholar.google.com/citations?user=YOUR_ID" target="_blank" rel="noopener">Google Scholar</a>
+                    <a href="https://scholar.google.com/citations?user=eXLlEAcAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar</a>
                 </div>
             </div>
         </div>
@@ -350,7 +390,7 @@
         <!-- About -->
         <div class="section">
             <div class="section-title">About</div>
-            <p class="bio">I build analytical pipelines that integrate large-scale mobility, economic, environmental, and demographic datasets to evaluate energy infrastructure deployment and community risk. My work spans causal inference, geospatial analytics, NLP, and statistical modeling &mdash; with a focus on understanding who benefits from infrastructure and who gets left behind.</p>
+            <p class="bio">I'm a PhD student in the <a href="https://cee.rice.edu/" target="_blank" rel="noopener">Department of Civil and Environmental Engineering</a> at Rice University, where I work in the <a href="https://mobix.blogs.rice.edu/" target="_blank" rel="noopener">Mobility-X Lab</a> with <a href="https://profiles.rice.edu/faculty/xinwu-qian" target="_blank" rel="noopener">Dr. Xinwu Qian</a>. I build analytical pipelines that integrate large-scale mobility, economic, environmental, and demographic datasets to model non-technical risks in infrastructure deployment. My work spans causal inference, geospatial analytics, ML, and statistical modeling with a focus on how infrastructure shapes urban ecosystems (neighborhood structures, mobility patterns, business dynamics) and gets shaped by them.</p>
         </div>
 
         <!-- Education -->
@@ -359,14 +399,14 @@
             <div class="edu-item">
                 <div>
                     <div class="degree">PhD in Transportation Engineering</div>
-                    <div class="school">Rice University, Houston, TX &middot; GPA 4.0/4.0</div>
+                    <div class="school">Rice University, Houston, TX</div>
                 </div>
-                <div class="year">Dec 2026</div>
+                <div class="year">Current</div>
             </div>
             <div class="edu-item">
                 <div>
                     <div class="degree">BSc in Industrial Engineering</div>
-                    <div class="school">Amirkabir University of Technology, Tehran, Iran &middot; GPA 18/20</div>
+                    <div class="school">Amirkabir University of Technology, Tehran, Iran</div>
                 </div>
                 <div class="year">2021</div>
             </div>
@@ -382,11 +422,12 @@
                     <span class="dates">2024 &ndash; Present</span>
                 </div>
                 <div class="org">Rice University, Dept. of Civil and Environmental Engineering &middot; Houston, TX</div>
+                <p class="exp-desc">Graduate researcher for NSF funded Strengthening America's Infrastructure, building end to end data pipelines integrating economic, environmental, demographic, and public perception datasets to model risks in energy infrastructure deployment.</p>
                 <ul>
-                    <li><strong>Non-Technical Risk Modeling:</strong> Quantified how economic, environmental, and public acceptance factors create hidden deployment risks across ~50% of national charging stations.</li>
-                    <li><strong>Social Influence on Adoption:</strong> Nonlinear causal discovery revealing infrastructure acts as an amplifier (41.8% mediated effect), with adoption shaped more by social exposure than functional utility.</li>
-                    <li><strong>Economic Resilience Modeling:</strong> Pipelines covering 100% of CA's commercial network showing commercially dependent communities experience 28&ndash;43% greater revenue exposure during outages.</li>
-                    <li><strong>Urban Mobility Disruption Detection:</strong> End-to-end anomaly detection with LLM-RAG attribution across 50 metro areas, quantifying cascading impacts from events like Winter Storm Elliott.</li>
+                    <li><strong>Non-Technical Risk Modeling for Infrastructure Siting:</strong> Covering ~50% of the national charging stations, quantified how economic, environmental, and public acceptance factors create hidden deployment risks: proximity alone fails to predict infrastructure usage, and closing access gaps requires 2.6 km additional travel burden on specific communities.</li>
+                    <li><strong>Social Influence on Infrastructure Adoption:</strong> Nonlinear causal discovery across Seattle, WA to understand how exposure to users and infrastructure jointly determine EV adoption. Found that infrastructure acts as an amplifier (41.8% mediated effect), with adoption shaped more by social exposure than functional utility. Uniform expansion gains 1.5% adoption but widens the community gap (3.6x).</li>
+                    <li><strong>Economic Resilience and Market Disruption Modeling:</strong> Analytical pipelines on how infrastructure disruptions cascade into local economic impacts, covering 100% of CA commercial network. Revealed that commercially dependent communities experience 28% to 43% greater revenue exposure.</li>
+                    <li><strong>Urban Mobility Disruption Detection:</strong> End-to-end urban anomaly detection (LLM RAG based attribution) identifying events (e.g., grid failures during Winter Storm Elliott) across 50 metro areas. Applied causal inference to quantify cascading impacts on mobility, economic, and community functionality, with areas in Houston remaining 35&ndash;52% below baseline 12+ months post event.</li>
                 </ul>
             </div>
 
@@ -396,10 +437,27 @@
                     <span class="dates">2022 &ndash; 2024</span>
                 </div>
                 <div class="org">Alabama Transportation Institute &middot; Tuscaloosa, AL</div>
+                <p class="exp-desc">Developed data-driven behavioral models and optimization frameworks for the USDOT SMART Mobility initiative, analyzing user behavior and system performance in Birmingham, AL metro area (population &gt;1M).</p>
                 <ul>
-                    <li><strong>Social Exclusion from Infrastructure:</strong> Built geospatial pipelines identifying 23% of census tracts in Birmingham with compounding exclusion, affecting ~148,000 residents.</li>
-                    <li><strong>Grid Failure Cascading Impact:</strong> Simulation framework modeling how 12-hour grid outages disrupt 67% of fixed-route transit within 4 hours.</li>
+                    <li><strong>User Behavior Prediction and Segmentation:</strong> Integrated GPS trajectories and socioeconomic attributes to predict multimodal travel behaviors and cluster users into behavioral segments, improving accessibility for underserved segments by ~12%.</li>
+                    <li><strong>Intervention Impact Estimation:</strong> Applied interrupted time series, difference-in-differences, and propensity score matching to isolate causal effects of service interventions, including signal priority at 10 candidate intersections that reduced system travel time by 8%.</li>
                 </ul>
+            </div>
+        </div>
+
+        <!-- Interactive Projects -->
+        <div class="section">
+            <div class="section-title">Interactive Projects</div>
+            <div class="projects">
+                <a href="ev-charging-dashboard/" class="project-card">
+                    <h3>EV Charging Accessibility Dashboard <span class="arrow">&rarr;</span></h3>
+                    <p>Interactive swipe-map comparing distance-based and visit-based accessibility to public EV charging stations across 20 major U.S. metro areas.</p>
+                    <div class="tags">
+                        <span class="tag">Mapbox GL JS</span>
+                        <span class="tag">EV Infrastructure</span>
+                        <span class="tag">Mobility Data</span>
+                    </div>
+                </a>
             </div>
         </div>
 
@@ -426,23 +484,7 @@
             </div>
         </div>
 
-        <!-- Interactive Projects -->
-        <div class="section">
-            <div class="section-title">Interactive Projects</div>
-            <div class="projects">
-                <a href="ev-charging-dashboard/" class="project-card">
-                    <h3>EV Charging Accessibility Dashboard <span class="arrow">&rarr;</span></h3>
-                    <p>Interactive swipe-map comparing distance-based and visit-based accessibility to public EV charging stations across 20 major U.S. metro areas.</p>
-                    <div class="tags">
-                        <span class="tag">Mapbox GL JS</span>
-                        <span class="tag">EV Infrastructure</span>
-                        <span class="tag">Mobility Data</span>
-                    </div>
-                </a>
-            </div>
-        </div>
-
-        <!-- Achievements -->
+        <!-- Achievements
         <div class="section">
             <div class="section-title">Achievements & Leadership</div>
             <ul class="achievements-list">
@@ -451,6 +493,18 @@
                 <li><strong>Energy HPC Fellowship</strong> &mdash; Ken Kennedy Institute</li>
                 <li>Mentored 4 undergraduates across departments through the Rice SURF program (all presented at conferences)</li>
                 <li>Judge for the Rice Research Symposium; member of TRB, ASCE, ASHE, and ITE</li>
+            </ul>
+        </div>
+        -->
+
+        <!-- What's New -->
+        <div class="section">
+            <div class="section-title">What's New</div>
+            <ul class="news-list">
+                <li><strong><a href="ev-charging-dashboard/">Charging Access Dashboard</a> is live.</strong> An interactive tool for exploring EV charging accessibility across urban communities. Take a look and feel free to send me your questions, recommendations, or feedback. <span class="news-date">(March 2026)</span></li>
+                <li><strong>Three presentations at TRB.</strong> Presented work on EV adoption, charging behavior, and commercial resilience at the Transportation Research Board Annual Meeting. Thanks to all collaborators who made these possible. <span class="news-date">(January 2026)</span></li>
+                <li><strong><a href="https://link.springer.com/article/10.1007/s42421-025-00136-2" target="_blank" rel="noopener">&ldquo;Seeing is Believing&rdquo;</a> published.</strong> A big shoutout to Nicolas and Jacob. Mentoring these two through the research process was one of the most rewarding parts of this project. <span class="news-date">(October 2025)</span></li>
+                <li><strong>ASHE Graduate Student Award.</strong> Honored to receive this recognition from the American Society of Highway Engineers. Grateful to everyone who has supported my work along the way. <span class="news-date">(September 2025)</span></li>
             </ul>
         </div>
 
