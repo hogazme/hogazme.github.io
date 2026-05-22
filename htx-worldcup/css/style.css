@@ -408,6 +408,39 @@ body {
     text-decoration: underline;
 }
 
+/* Sidebar footer */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-footer a {
+    color: #60a5fa;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.sidebar-footer a:hover {
+    color: #93c5fd;
+}
+
+.footer-sep {
+    color: #334155;
+}
+
+.footer-version {
+    margin-left: auto;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 500;
+}
+
 /* Map */
 #map-container {
     flex: 1;
