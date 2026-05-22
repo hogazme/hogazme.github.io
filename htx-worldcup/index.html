@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Houston World Cup 2026</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header id="header">
+        <h1>Houston World Cup 2026</h1>
+        <p class="subtitle">Accommodation Explorer</p>
+    </header>
+
+    <div id="app">
+        <aside id="sidebar">
+            <!-- Search -->
+            <div class="sidebar-section">
+                <label for="search-input">Search</label>
+                <input type="text" id="search-input" placeholder="Search by name..." />
+            </div>
+
+            <!-- Stats -->
+            <div class="sidebar-section" id="stats-section">
+                <label>Summary</label>
+                <div id="stats-content"></div>
+            </div>
+
+            <!-- Detail card (hidden until POI click) -->
+            <div class="sidebar-section hidden" id="detail-section">
+                <label>Details</label>
+                <button id="detail-close" aria-label="Close details">&times;</button>
+                <div id="detail-content"></div>
+            </div>
+
+            <!-- Overlay layers -->
+            <div class="sidebar-section" id="layers-section">
+                <label>Layers</label>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="crime-toggle" />
+                    <span class="layer-label">Crime Heatmap</span>
+                    <span class="layer-badge">2026</span>
+                </div>
+                <div id="crime-categories" class="crime-categories hidden"></div>
+            </div>
+        </aside>
+
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- Loading -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <span>Loading data...</span>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
