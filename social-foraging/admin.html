@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="admin-panel.css">
+</head>
+<body>
+    <div class="admin-container">
+        <h1><i class="fas fa-cog"></i> Admin Dashboard</h1>
+
+        <div class="sim-control">
+            <button id="simButton" class="sim-btn start">Start Simulation</button>
+            <div id="simStatus" class="sim-status">Waiting to start</div>
+        </div>
+
+        <div class="admin-grid">
+            <div class="panel">
+                <h2>Game Parameters</h2>
+                <div class="slider-group">
+                    <label>Stations <span class="val" id="stationCountVal">5</span></label>
+                    <input type="range" id="stationCount" min="5" max="50" value="5">
+                </div>
+                <div class="slider-group">
+                    <label>Player Budget <span class="val" id="playerBudgetVal">100</span></label>
+                    <input type="range" id="playerBudget" min="50" max="1000" value="100" step="10">
+                </div>
+                <div class="slider-group">
+                    <label>Min Charge Time (s) <span class="val" id="minChargeTimeVal">30</span></label>
+                    <input type="range" id="minChargeTime" min="10" max="60" value="30" step="10">
+                </div>
+                <div class="slider-group">
+                    <label>Max Charge Time (s) <span class="val" id="maxChargeTimeVal">90</span></label>
+                    <input type="range" id="maxChargeTime" min="60" max="120" value="90" step="10">
+                </div>
+                <div class="slider-group">
+                    <label>Min Price ($) <span class="val" id="minPriceVal">10</span></label>
+                    <input type="range" id="minPrice" min="10" max="30" value="10">
+                </div>
+                <div class="slider-group">
+                    <label>Max Price ($) <span class="val" id="maxPriceVal">35</span></label>
+                    <input type="range" id="maxPrice" min="35" max="50" value="35">
+                </div>
+                <button class="btn btn-primary" id="btnUpdateParams" style="width:100%">Update Parameters</button>
+            </div>
+
+            <div class="panel">
+                <h2>Station Editor</h2>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div><label style="font-size:12px;color:#94a3b8">X</label><input type="number" id="stationX" min="0" max="970" placeholder="X"></div>
+                    <div><label style="font-size:12px;color:#94a3b8">Y</label><input type="number" id="stationY" min="0" max="970" placeholder="Y"></div>
+                    <div><label style="font-size:12px;color:#94a3b8">Cost ($)</label><input type="number" id="stationCost" min="1" max="100" placeholder="Cost"></div>
+                    <div><label style="font-size:12px;color:#94a3b8">Sockets</label><input type="number" id="stationSockets" min="1" max="5" placeholder="Sockets"></div>
+                    <div style="grid-column:1/-1"><label style="font-size:12px;color:#94a3b8">Charge Time (s)</label><input type="number" id="stationChargeTime" min="10" max="300" placeholder="Seconds"></div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="btnAddStation">Add</button>
+                    <button class="btn btn-success" id="btnUpdateStation">Update</button>
+                    <button class="btn btn-danger" id="btnClearAll">Clear All</button>
+                    <button class="btn btn-warning" id="btnApply">Apply to Game</button>
+                </div>
+                <div class="station-list-panel" id="stationList"></div>
+            </div>
+
+            <div class="panel map-panel">
+                <h2>Station Map (click to set position)</h2>
+                <div class="admin-map-container">
+                    <div class="admin-map" id="adminMap">
+                        <div class="road vertical-road" style="left:0;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:115px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:235px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:355px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:470px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:615px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:735px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:855px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road vertical-road" style="left:970px;top:0;width:30px;height:1000px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:0;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:115px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:235px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:355px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:470px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:615px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:735px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:855px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                        <div class="road horizontal-road" style="left:0;top:970px;width:1000px;height:30px;position:absolute;background:#555"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="admin-panel.js"></script>
+</body>
+</html>

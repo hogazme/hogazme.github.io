@@ -1,0 +1,41 @@
+{
+  "stations": [
+    {
+      "id": "station-0",
+      "left": 600,
+      "top": 400,
+      "cost": 35,
+      "sockets": 4,
+      "chargeTime": 50,
+      "activeChargers": 0
+    },
+    {
+      "id": "station-1",
+      "left": 240,
+      "top": 240,
+      "cost": 15,
+      "sockets": 2,
+      "chargeTime": 80,
+      "activeChargers": 0
+    },
+    {
+      "id": "station-2",
+      "left": 860,
+      "top": 740,
+      "cost": 50,
+      "sockets": 6,
+      "chargeTime": 30,
+      "activeChargers": 0
+    },
+    {
+      "id": "station-3",
+      "left": 360,
+      "top": 620,
+      "cost": 25,
+      "sockets": 3,
+      "chargeTime": 60,
+      "activeChargers": 0
+    }
+  ],
+  "timestamp": "2025-09-18T20:16:29.311Z"
+}

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Foraging Task</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="game.css">
+</head>
+<body>
+    <div class="toast-container" id="toast-container"></div>
+    <!-- Minimap commented out — uncomment to re-enable
+    <canvas id="minimap" width="140" height="140"></canvas>
+    -->
+    <div class="dpad" id="dpad">
+        <button class="dpad-btn dpad-up" data-dir="up"><i class="fas fa-chevron-up"></i></button>
+        <button class="dpad-btn dpad-left" data-dir="left"><i class="fas fa-chevron-left"></i></button>
+        <button class="dpad-btn dpad-center"></button>
+        <button class="dpad-btn dpad-right" data-dir="right"><i class="fas fa-chevron-right"></i></button>
+        <button class="dpad-btn dpad-down" data-dir="down"><i class="fas fa-chevron-down"></i></button>
+    </div>
+
+    <div class="sidebar">
+        <div class="ui-container" id="ui-container">
+            <div class="player-name-display" id="player-name-display">Player</div>
+
+            <div class="stat-row">
+                <i class="fas fa-bolt stat-icon energy-icon"></i>
+                <div class="stat-bar-container">
+                    <div class="stat-bar energy-bar" id="energy-bar"></div>
+                </div>
+                <span class="stat-value" id="energy-value">100%</span>
+            </div>
+
+            <div class="stat-row">
+                <i class="fas fa-wallet stat-icon money-icon"></i>
+                <span class="stat-value money-value" id="money-indicator">$100</span>
+            </div>
+
+            <div class="stat-row delivery-row">
+                <i class="fas fa-box stat-icon delivery-icon"></i>
+                <span class="stat-value" id="item-indicator">No item</span>
+            </div>
+
+            <p class="instruction-text" id="instruction-text">
+                Use <strong>arrow keys</strong> to move. Click a <strong>charging station</strong> for info.
+            </p>
+
+            <button id="reset-button"><i class="fas fa-redo"></i> Reset Car</button>
+
+            <header class="branding">
+                <div class="logo-container">
+                    <img src="Rice_logo.png" alt="Rice University">
+                    <img src="Purdue_logo.png" alt="Purdue University">
+                    <img src="NSF_logo.png" alt="NSF">
+                </div>
+                <p class="award-text">Supported by NSF Award BCS #2323732</p>
+                <p class="award-text">Contact: <a href="mailto:xq15@rice.edu" style="color:#38bdf8;text-decoration:none;">Dr. Xinwu Qian</a></p>
+            </header>
+        </div>
+
+        <!-- Admin controls hidden in static mode — no server to communicate with -->
+    </div>
+
+    <div class="map-container">
+        <div class="map" id="map">
+            <div class="road vertical-road vertical-road-1"></div>
+            <div class="road vertical-road vertical-road-2"></div>
+            <div class="road vertical-road vertical-road-3"></div>
+            <div class="road vertical-road vertical-road-4"></div>
+            <div class="road vertical-road vertical-road-5"></div>
+            <div class="road vertical-road vertical-road-6"></div>
+            <div class="road vertical-road vertical-road-7"></div>
+            <div class="road vertical-road vertical-road-8"></div>
+            <div class="road vertical-road vertical-road-9"></div>
+
+            <div class="road horizontal-road horizontal-road-1"></div>
+            <div class="road horizontal-road horizontal-road-2"></div>
+            <div class="road horizontal-road horizontal-road-3"></div>
+            <div class="road horizontal-road horizontal-road-4"></div>
+            <div class="road horizontal-road horizontal-road-5"></div>
+            <div class="road horizontal-road horizontal-road-6"></div>
+            <div class="road horizontal-road horizontal-road-7"></div>
+            <div class="road horizontal-road horizontal-road-8"></div>
+            <div class="road horizontal-road horizontal-road-9"></div>
+
+            <div class="road entry-road entry-road-left">4</div>
+            <div class="road exit-road exit-road-right">2</div>
+            <div class="road entry-road-top entry-road-top">1</div>
+            <div class="road exit-road-bottom exit-road-bottom">3</div>
+        </div>
+    </div>
+
+    <script src="shared/roads.cjs"></script>
+    <script>
+    // Single-player mock — replaces Socket.io so game.js runs without a server.
+    // Station config and player state are handled entirely client-side.
+    const STATIC_STATIONS = [
+        { id: "station-0", left: 600, top: 400, cost: 35, sockets: 4, chargeTime: 50, activeChargers: 0 },
+        { id: "station-1", left: 240, top: 240, cost: 15, sockets: 2, chargeTime: 80, activeChargers: 0 },
+        { id: "station-2", left: 860, top: 740, cost: 50, sockets: 6, chargeTime: 30, activeChargers: 0 },
+        { id: "station-3", left: 360, top: 620, cost: 25, sockets: 3, chargeTime: 60, activeChargers: 0 }
+    ];
+    const PLAYER_BUDGET = 720;
+
+    function io() {
+        const handlers = {};
+        const entryPoints = ROAD_CONFIG.entryPoints;
+        const spawn = entryPoints[Math.floor(Math.random() * entryPoints.length)];
+        const localId = 'local-player';
+
+        const socket = {
+            on(event, cb) {
+                if (!handlers[event]) handlers[event] = [];
+                handlers[event].push(cb);
+            },
+            emit(event, data) {
+                if (event === 'validateCharging') {
+                    const station = STATIC_STATIONS.find(s => s.id === data.stationId);
+                    const canCharge = station && station.activeChargers < station.sockets;
+                    const currentChargers = station ? station.activeChargers + (canCharge ? 1 : 0) : 0;
+                    if (canCharge) station.activeChargers++;
+                    fire('chargingValidation', {
+                        stationId: data.stationId,
+                        canCharge: canCharge,
+                        currentChargers: currentChargers,
+                        message: canCharge ? '' : 'No sockets available'
+                    });
+                }
+                if (event === 'chargingStart') {
+                    fire('chargingStart', {
+                        stationId: data.stationId,
+                        playerId: localId,
+                        currentChargers: data.currentChargers + 1
+                    });
+                }
+                if (event === 'chargingStop') {
+                    const station = STATIC_STATIONS.find(s => s.id === data.stationId);
+                    if (station) station.activeChargers = Math.max(0, station.activeChargers - 1);
+                    fire('chargingStop', {
+                        stationId: data.stationId,
+                        playerId: localId,
+                        currentChargers: data.currentChargers,
+                        positionX: data.positionX,
+                        positionY: data.positionY
+                    });
+                }
+                if (event === 'chargingComplete') {
+                    const station = STATIC_STATIONS.find(s => s.id === data.stationId);
+                    if (station) station.activeChargers = Math.max(0, station.activeChargers - 1);
+                    fire('chargingComplete', {
+                        stationId: data.stationId,
+                        playerId: localId,
+                        currentChargers: data.currentChargers,
+                        positionX: data.positionX,
+                        positionY: data.positionY
+                    });
+                }
+            }
+        };
+
+        function fire(event, data) {
+            if (handlers[event]) handlers[event].forEach(cb => cb(data));
+        }
+
+        setTimeout(() => {
+            fire('gameState', {
+                playerId: localId,
+                players: [{
+                    id: localId,
+                    name: 'Player 1',
+                    positionX: spawn.x,
+                    positionY: spawn.y,
+                    energy: 100,
+                    money: PLAYER_BUDGET,
+                    color: '#3b82f6'
+                }],
+                stations: STATIC_STATIONS
+            });
+        }, 100);
+
+        return socket;
+    }
+    </script>
+    <script src="game.js"></script>
+</body>
+</html>
