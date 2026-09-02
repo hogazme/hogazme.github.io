@@ -131,7 +131,13 @@
   }
 
   /* The strip is both a scrub target and the honest disclosure of the
-     2023/2024 data-supply regimes, which are plainly visible as level steps. */
+     2023/2024 data-supply regimes, which are plainly visible as level steps.
+     Monthly means occupy a narrow slice of the 0-255 range, so the y-axis is
+     autoscaled to the data (padded 8% each side) and redrawn per call, since
+     switching between the exposure and reach views changes the channel. Once
+     the axis no longer starts at zero, a bar mark would visually exaggerate
+     small differences into large ratios; a line is the honest mark for a
+     truncated axis. */
   function drawMeanStrip() {
     var cv = document.getElementById('mean-strip');
     var ctx = cv.getContext('2d');
@@ -140,14 +146,49 @@
     var w = cv.width, h = cv.height;
     ctx.clearRect(0, 0, w, h);
 
+    var lo = Math.min.apply(null, vals);
+    var hi = Math.max.apply(null, vals);
+    var pad = Math.max(hi - lo, 1) * 0.08;
+    lo -= pad; hi += pad;
+
     var bw = w / vals.length;
-    for (var i = 0; i < vals.length; i++) {
-      var bad = meta.flags.bad_months.indexOf(meta.months[i]) !== -1;
-      var y = h - (vals[i] / 255) * h;
-      ctx.fillStyle = bad ? '#fab219'
-        : (i === state.monthIndex ? '#f8fafc' : 'rgba(148,163,184,0.45)');
-      ctx.fillRect(i * bw, y, Math.max(1, bw - 1), h - y);
+    function xAt(i) { return (i + 0.5) * bw; }
+    function yAt(v) { return h - ((v - lo) / (hi - lo)) * h; }
+
+    var pts = [];
+    for (var i = 0; i < vals.length; i++) pts.push([xAt(i), yAt(vals[i])]);
+
+    // Soft fill beneath the line.
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], h);
+    for (i = 0; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.lineTo(pts[pts.length - 1][0], h);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(148,163,184,0.10)';
+    ctx.fill();
+
+    // The trend line itself.
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.strokeStyle = 'rgba(148,163,184,0.75)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Bad-month ticks, full height.
+    for (i = 0; i < vals.length; i++) {
+      if (meta.flags.bad_months.indexOf(meta.months[i]) === -1) continue;
+      ctx.fillStyle = '#fab219';
+      ctx.fillRect(xAt(i) - 0.75, 0, 1.5, h);
     }
+
+    // Current-month marker: vertical line plus a dot on the trend line.
+    var cx = xAt(state.monthIndex), cy = yAt(vals[state.monthIndex]);
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(cx - 0.75, 0, 1.5, h);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   function bindTransport() {
