@@ -23,7 +23,7 @@
     'Similar incomes, very different races',
     'Somewhat richer crowds, similar races',
     'Middling on both',
-    'Similar incomes aside, quite different crowds',
+    'Somewhat richer crowds, very different races',
     'Much richer crowds, similar races',
     'Much richer crowds, somewhat different races',
     'Richer and racially unlike crowds'

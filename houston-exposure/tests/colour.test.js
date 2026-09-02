@@ -12,7 +12,23 @@ test('palette and ramp are the validated values', () => {
     '#2a78d6', '#3c6aa4', '#455b76', '#4a4a48',
     '#784b46', '#a34842', '#d03b3b'
   ]);
-  assert.strictEqual(C.CELL_LABELS.length, 9);
+});
+
+test('legend labels are the validated copy', () => {
+  // These are the validated legend labels pinned here. Changing them must be
+  // deliberate: each label names its bivariate cell's income and race axes.
+  // cellIndex = classOf(c1) * 3 + classOf(c3), so index 5 is mid income × high race.
+  assert.deepStrictEqual(C.CELL_LABELS, [
+    'Travels among people like itself',
+    'Similar incomes, different races',
+    'Similar incomes, very different races',
+    'Somewhat richer crowds, similar races',
+    'Middling on both',
+    'Somewhat richer crowds, very different races',
+    'Much richer crowds, similar races',
+    'Much richer crowds, somewhat different races',
+    'Richer and racially unlike crowds'
+  ]);
 });
 
 test('classOf cuts at 85 and 170', () => {
