@@ -32,6 +32,17 @@ REGIMES = [
 ]
 
 
+def _assert_unique_pairs(u):
+    """A duplicated (cbg_geoid, year_month) pair combined with the missing
+    pair it displaces would still pass the aggregate row-count check, and
+    would silently leave one CBG-month at its np.zeros() default of 0
+    instead of raising. With the row-count check already holding, no
+    duplicates implies no missing pairs either, so this closes that gap."""
+    dup = u.duplicated(["cbg_geoid", "year_month"]).sum()
+    assert dup == 0, (
+        f"{dup} duplicate (cbg_geoid, year_month) pairs in components table")
+
+
 def load_components():
     u = pd.read_parquet(os.path.join(SRC, "houston_components_uint8.parquet"))
     geoids = np.array(sorted(u["cbg_geoid"].unique()), dtype=np.int64)
@@ -43,6 +54,7 @@ def load_components():
                              freq="MS").strftime("%Y-%m").tolist()
     assert months == expected, "months are not contiguous 2019-01..2024-12"
     assert len(u) == N_CBG * N_MONTH, f"expected 208,152 rows, got {len(u)}"
+    _assert_unique_pairs(u)
 
     gpos = {g: i for i, g in enumerate(geoids)}
     mpos = {m: i for i, m in enumerate(months)}
@@ -57,11 +69,22 @@ def load_components():
     return geoids, months, planes
 
 
+def _income_gap_cols(columns):
+    """Over zero matching columns, (g == N_MONTH).all(axis=1) is vacuously
+    True for every row, which would silently mark every CBG as imputed
+    instead of failing if the upstream column prefix ever changes."""
+    cols = [c for c in columns if c.startswith("income_exposure_gap_")]
+    assert cols, (
+        "no columns matching prefix 'income_exposure_gap_' found in "
+        "houston_imputation_mask.parquet")
+    return cols
+
+
 def load_imputed_cbgs():
     """The 168 CBGs whose ACS median_household_income is 0, so every
     income_exposure_gap column is undefined in all 72 months."""
     mk = pd.read_parquet(os.path.join(SRC, "houston_imputation_mask.parquet"))
-    cols = [c for c in mk.columns if c.startswith("income_exposure_gap_")]
+    cols = _income_gap_cols(mk.columns)
     g = mk.groupby("cbg_geoid")[cols].sum()
     return set(g.index[(g == N_MONTH).all(axis=1)].tolist())
 

@@ -6,6 +6,7 @@ import os
 import sys
 
 import numpy as np
+import pandas as pd
 import pytest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -82,3 +83,21 @@ def test_flags_name_the_bad_month_and_regimes(built):
     assert len(m["flags"]["regimes"]) == 4
     assert m["stats"]["n_imputed_cbgs"] == 168
     assert m["stats"]["evr_cum3"] == pytest.approx(0.4738, abs=1e-3)
+
+
+def test_duplicate_cbg_month_pair_fails_loudly():
+    """A duplicated (cbg_geoid, year_month) pair must raise, not silently
+    displace a missing pair that would otherwise stay 0 from np.zeros()."""
+    u = pd.DataFrame({
+        "cbg_geoid": [480157601002, 480157601002, 480157601003],
+        "year_month": ["2019-01", "2019-01", "2019-01"],
+    })
+    with pytest.raises(AssertionError, match="duplicate"):
+        B._assert_unique_pairs(u)
+
+
+def test_no_income_gap_columns_fails_loudly():
+    """If the upstream column prefix ever changes, cols must not silently
+    become empty and mark every CBG as imputed."""
+    with pytest.raises(AssertionError, match="income_exposure_gap_"):
+        B._income_gap_cols(["cbg_geoid", "some_other_column"])
