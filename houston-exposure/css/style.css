@@ -1,0 +1,246 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+/* Header */
+#header {
+    height: 60px;
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    z-index: 10;
+    position: relative;
+}
+
+#header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #f8fafc;
+}
+
+#header .subtitle {
+    font-size: 16px;
+    font-weight: 500;
+    color: #64748b;
+}
+
+/* App layout */
+#app {
+    display: flex;
+    height: calc(100vh - 124px);
+}
+
+/* Sidebar */
+#sidebar {
+    width: 370px;
+    min-width: 370px;
+    background: rgba(15, 23, 42, 0.97);
+    border-right: 1px solid rgba(148, 163, 184, 0.12);
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 5;
+}
+
+.sidebar-section {
+    position: relative;
+}
+
+.sidebar-section label {
+    display: block;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+
+/* Sidebar footer */
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-footer a {
+    color: #60a5fa;
+    text-decoration: none;
+    transition: color 0.15s;
+}
+
+.sidebar-footer a:hover {
+    color: #93c5fd;
+}
+
+.footer-sep {
+    color: #334155;
+}
+
+.footer-version {
+    margin-left: auto;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Map */
+#map-container {
+    flex: 1;
+    position: relative;
+}
+
+#map {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+/* Tooltip */
+.tooltip {
+    display: none;
+    position: fixed;
+    z-index: 20;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    max-width: 280px;
+}
+
+/* Loading. htx-worldcup gates this on an opt-in `.visible` class; this page
+   gates every transient panel on the opt-out `.hidden` utility below (see
+   app.js's show()), so the overlay is visible by default and closed by
+   adding `.hidden` once the first paint lands. */
+#loading {
+    display: flex;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 30;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 16px;
+    padding: 24px 32px;
+    color: #e2e8f0;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    align-items: center;
+    gap: 12px;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(148, 163, 184, 0.2);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Hidden utility. Not present as a standalone rule in htx-worldcup (it only
+   scopes `.hidden` to specific ids there); every transient panel in this
+   page's markup (#detail-section, #methods-panel, #mode-warning, #loading)
+   relies on this generic class via app.js's show(), so it needs to win over
+   any component-specific `display` value. */
+.hidden {
+    display: none !important;
+}
+
+/* Transport */
+#transport {
+    height: 64px;
+    background: rgba(15, 23, 42, 0.97);
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    position: relative;
+    z-index: 6;
+}
+
+#transport button#play {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(30, 41, 59, 0.8);
+    color: #f1f5f9;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+#month-slider { flex: 1; accent-color: #60a5fa; }
+
+.month-edge { color: #64748b; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+#month-label {
+    color: #f8fafc;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 68px;
+    text-align: right;
+}
+
+#mean-strip { height: 26px; width: 220px; flex-shrink: 0; }
+
+/* Legend */
+#legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; width: 132px; }
+
+.legend-cell {
+    aspect-ratio: 1;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    cursor: pointer;
+    transition: outline-color 0.12s;
+    outline: 2px solid transparent;
+}
+
+.legend-cell:hover, .legend-cell.active { outline-color: #f8fafc; }
+
+.legend-axis { color: #64748b; font-size: 10px; letter-spacing: 0.04em; }
+
+.warning {
+    color: #fab219;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
