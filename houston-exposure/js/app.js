@@ -94,39 +94,55 @@
     });
   }
 
+  /* Any load failure — CDN unreachable, a data fetch 404, a corrupt binary —
+     would otherwise leave the loading overlay spinning forever with no
+     explanation. Replace its content with a readable message instead, and
+     keep the original error in the console for debugging. */
+  function showLoadError(err) {
+    console.error(err);
+    var el = document.getElementById('loading');
+    el.innerHTML = '<p class="warning">Could not load the map: ' +
+      (err && err.message ? err.message : String(err)) +
+      '. Try reloading the page.</p>';
+  }
+
   async function init() {
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    map = new mapboxgl.Map({
-      container: 'map',
-      style: MAP_STYLE,
-      center: HOUSTON_CENTER,
-      zoom: HOUSTON_ZOOM,
-      attributionControl: false
-    });
-    map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+    try {
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      map = new mapboxgl.Map({
+        container: 'map',
+        style: MAP_STYLE,
+        center: HOUSTON_CENTER,
+        zoom: HOUSTON_ZOOM,
+        attributionControl: false
+      });
+      map.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
-    var results = await Promise.all([
-      fetch('data/meta.json').then(function (r) { return r.json(); }),
-      fetch('data/components.bin').then(function (r) { return r.arrayBuffer(); }),
-      fetch('data/houston_cbgs.topo.json').then(function (r) { return r.json(); }),
-      new Promise(function (res) { map.on('load', res); })
-    ]);
-    meta = results[0];
-    comp = HX.data.decodeComponents(results[1]);
-    var topo = results[2];
+      var results = await Promise.all([
+        fetch('data/meta.json').then(function (r) { return r.json(); }),
+        fetch('data/components.bin').then(function (r) { return r.arrayBuffer(); }),
+        fetch('data/houston_cbgs.topo.json').then(function (r) { return r.json(); }),
+        new Promise(function (res) { map.on('load', res); })
+      ]);
+      meta = results[0];
+      comp = HX.data.decodeComponents(results[1]);
+      var topo = results[2];
 
-    if (meta.n_cbgs !== HX.data.N_CBG || meta.n_months !== HX.data.N_MONTH) {
-      throw new Error('meta.json disagrees with the binary layout');
+      if (meta.n_cbgs !== HX.data.N_CBG || meta.n_months !== HX.data.N_MONTH) {
+        throw new Error('meta.json disagrees with the binary layout');
+      }
+
+      addLayers(topojson.feature(topo, topo.objects.data));
+      repaint();
+      show(document.getElementById('loading'), false);
+
+      HX.app.map = map;
+      HX.app.meta = meta;
+      HX.app.comp = comp;
+    } catch (err) {
+      showLoadError(err);
     }
-
-    addLayers(topojson.feature(topo, topo.objects.data));
-    repaint();
-    show(document.getElementById('loading'), false);
-
-    HX.app.map = map;
-    HX.app.meta = meta;
-    HX.app.comp = comp;
   }
 
   window.HX = window.HX || {};
