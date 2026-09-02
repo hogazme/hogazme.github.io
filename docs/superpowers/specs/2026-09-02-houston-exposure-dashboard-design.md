@@ -2,6 +2,11 @@
 
 **Status:** approved for planning · **Date:** 2026-09-02 · **Route:** `hogazme.github.io/houston-exposure/`
 
+> **Built 2026-09-02.** Shipped with deliberate departures from §4.2 (no pinned scrollytelling; a
+> one-frame intro card instead), §4.3 (legend carries axis labels and a live reading line) and
+> §4.6 (imputed CBGs outlined, not hatched). The record of what shipped and why is
+> `houston-exposure/README.md`.
+
 A scroll-then-explore map of Houston's behavioural geography. 2,891 census block groups ×
 72 months (2019-01 … 2024-12), each coloured by a two-axis summary of *who its residents
 encounter* when they travel.
