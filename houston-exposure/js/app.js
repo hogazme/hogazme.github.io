@@ -235,7 +235,7 @@
     /* Draw high PC1 first so the legend reads bottom-up like a chart axis. */
     [2, 1, 0].forEach(function (row) {
       for (var col = 0; col < 3; col++) {
-        var idx = row * 3 + col;
+        let idx = row * 3 + col;
         var d = document.createElement('div');
         d.className = 'legend-cell';
         d.dataset.cell = idx;
@@ -264,7 +264,7 @@
     var flags = new Uint8Array(cells.length);
     for (var i = 0; i < cells.length; i++) flags[i] = cells[i] === cell ? 1 : 0;
     map.setPaintProperty('cbg-fill', 'fill-opacity',
-      HX.colour.matchExpression(flags, [0.15, 0.95]));
+      HX.colour.matchExpression(flags, [0.15, 0.95], 0.15));
   }
 
   function setView(v) {

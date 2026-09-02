@@ -98,3 +98,14 @@ test('a full 2891-feature expression stays small', () => {
   const e = C.matchExpression(classes, C.PALETTE);
   assert.strictEqual(e.length, 2 + 9 * 2 + 1);   // 9 branches, not 2891
 });
+
+test('matchExpression defaults its fallback to transparent when omitted', () => {
+  const e = C.matchExpression(Uint8Array.from([0, 1]), ['#aaaaaa', '#bbbbbb']);
+  assert.strictEqual(e[e.length - 1], 'rgba(0,0,0,0)');
+});
+
+test('matchExpression accepts an explicit non-colour fallback, e.g. for fill-opacity', () => {
+  const e = C.matchExpression(Uint8Array.from([0, 1]), [0.15, 0.95], 0.15);
+  assert.strictEqual(e[e.length - 1], 0.15);
+  assert.strictEqual(typeof e[e.length - 1], 'number');
+});

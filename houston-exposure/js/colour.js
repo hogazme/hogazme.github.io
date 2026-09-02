@@ -87,8 +87,13 @@
   /* Build a Mapbox `match` expression keyed on the baked `idx` property.
      Mapbox accepts an ARRAY of labels per branch, so 2,891 features collapse
      to one branch per colour instead of 2,891 branches. Colours no feature
-     uses are omitted entirely. */
-  function matchExpression(classes, colours) {
+     uses are omitted entirely.
+     `fallback` defaults to a transparent colour (the historical behaviour for
+     `fill-color` call sites); callers building a non-colour expression (e.g.
+     the numeric `fill-opacity` isolate) must pass an explicit fallback of the
+     matching type, since Mapbox validates that every branch of an expression
+     shares one output type. */
+  function matchExpression(classes, colours, fallback) {
     var buckets = [];
     var i;
     for (i = 0; i < colours.length; i++) buckets.push([]);
@@ -101,7 +106,7 @@
         expr.push(colours[i]);
       }
     }
-    expr.push('rgba(0,0,0,0)');            // fallback: features with no idx
+    expr.push(fallback === undefined ? 'rgba(0,0,0,0)' : fallback);
     return expr;
   }
 
