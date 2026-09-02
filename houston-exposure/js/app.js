@@ -60,6 +60,9 @@
   function addLayers(geojson) {
     map.addSource('cbgs', { type: 'geojson', data: geojson, promoteId: 'cbg_geoid' });
 
+    propsByIdx = new Array(HX.data.N_CBG);
+    geojson.features.forEach(function (f) { propsByIdx[f.properties.idx] = f.properties; });
+
     map.addLayer({
       id: 'cbg-fill',
       type: 'fill',
@@ -306,6 +309,114 @@
     ], state.mode, setMode);
   }
 
+  var propsByIdx = null;      // idx -> feature properties, filled in addLayers
+
+  function channelReading(plane, channel, idx) {
+    var raw = HX.data.valueAt(plane, state.monthIndex, idx);
+    return {
+      pct: Math.round(raw / 255 * 100),
+      rank: HX.data.rankInMonth(plane, state.monthIndex, idx)
+    };
+  }
+
+  function sparkline(plane, idx, colour) {
+    var pts = [];
+    for (var t = 0; t < HX.data.N_MONTH; t++) {
+      pts.push((t / (HX.data.N_MONTH - 1)) * 200 + ',' +
+               (26 - HX.data.valueAt(plane, t, idx) / 255 * 26));
+    }
+    var x = (state.monthIndex / (HX.data.N_MONTH - 1)) * 200;
+    return '<svg class="spark" viewBox="0 0 200 26" preserveAspectRatio="none">' +
+      '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + colour +
+      '" stroke-width="1.2"/>' +
+      '<line x1="' + x + '" y1="0" x2="' + x + '" y2="26" ' +
+      'stroke="#f8fafc" stroke-width="1" opacity="0.7"/></svg>';
+  }
+
+  function renderDetail(idx) {
+    var p = propsByIdx[idx];
+    var cell = HX.colour.cellIndex(
+      state.mode === 'absolute' ? HX.data.valueAt(comp.c1, state.monthIndex, idx)
+        : HX.colour.relativise(HX.data.valueAt(comp.c1, state.monthIndex, idx), means('c1')),
+      state.mode === 'absolute' ? HX.data.valueAt(comp.c3, state.monthIndex, idx)
+        : HX.colour.relativise(HX.data.valueAt(comp.c3, state.monthIndex, idx), means('c3'))
+    );
+    var e = channelReading(comp.c1, 'c1', idx);
+    var r = channelReading(comp.c2, 'c2', idx);
+    var d = channelReading(comp.c3, 'c3', idx);
+
+    var html =
+      '<div class="detail-geoid">' + p.cbg_geoid + '</div>' +
+      '<div class="detail-cell"><span class="swatch" style="background:' +
+        HX.colour.PALETTE[cell] + '"></span>' + HX.colour.CELL_LABELS[cell] + '</div>' +
+      (p.imputed_income === 1
+        ? '<p class="warning">This block group reports a median household income of 0 ' +
+          'in the ACS, so its income-exposure features are Houston-median fills. ' +
+          'Its colour is partly an artefact.</p>'
+        : '') +
+      '<div class="detail-row"><span>Exposure gap</span>' +
+        '<b>' + e.pct + 'th pct</b><small>rank ' + e.rank + ' of 2,891</small></div>' +
+      sparkline(comp.c1, idx, '#60a5fa') +
+      '<div class="detail-row"><span>Trip reach</span>' +
+        '<b>' + r.pct + 'th pct</b><small>rank ' + r.rank + ' of 2,891</small></div>' +
+      sparkline(comp.c2, idx, '#a34842') +
+      '<div class="detail-row"><span>Racial dissimilarity</span>' +
+        '<b>' + d.pct + 'th pct</b><small>rank ' + d.rank + ' of 2,891</small></div>' +
+      sparkline(comp.c3, idx, '#e8833a') +
+      '<div class="detail-demo">' +
+        'Population ' + (p.tot_pop || 0).toLocaleString() + ' &middot; ' +
+        'median income ' + (p.median_household_income
+          ? '$' + Math.round(p.median_household_income).toLocaleString() : 'n/a') + '<br>' +
+        'Bachelor\'s ' + Math.round((p.bachelors_degree_pct || 0) * 100) + '% &middot; ' +
+        'poverty ' + Math.round((p.poverty_rate || 0) * 100) + '%' +
+      '</div>';
+
+    document.getElementById('detail-content').innerHTML = html;
+    show(document.getElementById('detail-section'), true);
+  }
+
+  function clearSelection() {
+    state.selectedIdx = null;
+    show(document.getElementById('detail-section'), false);
+    map.setFilter('cbg-selected', ['==', ['get', 'idx'], -1]);
+  }
+
+  function bindSelection() {
+    map.addLayer({
+      id: 'cbg-selected',
+      type: 'line',
+      source: 'cbgs',
+      filter: ['==', ['get', 'idx'], -1],
+      paint: { 'line-color': '#f8fafc', 'line-width': 2 }
+    });
+
+    var tip = document.getElementById('tooltip');
+    map.on('mousemove', 'cbg-fill', function (ev) {
+      map.getCanvas().style.cursor = 'pointer';
+      var p = ev.features[0].properties;
+      tip.style.display = 'block';
+      tip.style.left = (ev.point.x + 14) + 'px';
+      tip.style.top = (ev.point.y + 14) + 'px';
+      tip.textContent = p.cbg_geoid;
+    });
+    map.on('mouseleave', 'cbg-fill', function () {
+      map.getCanvas().style.cursor = '';
+      tip.style.display = 'none';
+    });
+    map.on('click', 'cbg-fill', function (ev) {
+      var idx = ev.features[0].properties.idx;
+      state.selectedIdx = idx;
+      map.setFilter('cbg-selected', ['==', ['get', 'idx'], idx]);
+      renderDetail(idx);
+    });
+    document.getElementById('detail-close')
+      .addEventListener('click', clearSelection);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') clearSelection();
+    });
+  }
+
   async function init() {
     try {
       mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -337,6 +448,7 @@
       repaint();
       buildLegend();
       renderControls();
+      bindSelection();
       bindTransport();
       drawMeanStrip();
       show(document.getElementById('loading'), false);
