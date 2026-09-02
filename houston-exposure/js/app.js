@@ -209,6 +209,103 @@
     });
   }
 
+  var REGIME_WARNING =
+    'Absolute mode compares raw values across months. The panel contains three ' +
+    'data-supply regimes (the POI roster is frozen 2019-01 to 2022-11, 2022-12 is ' +
+    'partial, and the roster changes again in 2023 and 2024), so the whole map ' +
+    'shifts colour at those boundaries for reasons that are not behavioural.';
+
+  function buildLegend() {
+    var el = document.getElementById('legend');
+    el.innerHTML = '';
+    if (state.view === 'reach') {
+      el.style.gridTemplateColumns = 'repeat(7, 1fr)';
+      el.style.width = '188px';
+      HX.colour.REACH_RAMP.forEach(function (c, i) {
+        var d = document.createElement('div');
+        d.className = 'legend-cell';
+        d.style.background = c;
+        d.title = i < 3 ? 'Shorter trips' : (i > 3 ? 'Longer trips' : 'Typical');
+        el.appendChild(d);
+      });
+      return;
+    }
+    el.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    el.style.width = '132px';
+    /* Draw high PC1 first so the legend reads bottom-up like a chart axis. */
+    [2, 1, 0].forEach(function (row) {
+      for (var col = 0; col < 3; col++) {
+        var idx = row * 3 + col;
+        var d = document.createElement('div');
+        d.className = 'legend-cell';
+        d.dataset.cell = idx;
+        d.style.background = HX.colour.PALETTE[idx];
+        d.title = HX.colour.CELL_LABELS[idx];
+        d.addEventListener('mouseenter', function () { setHoverCell(idx); });
+        d.addEventListener('mouseleave', function () { setHoverCell(null); });
+        el.appendChild(d);
+      }
+    });
+  }
+
+  /* Legend isolate: the secondary encoding that makes an individual cell
+     resolvable even though adjacent cells are deliberately similar. */
+  function setHoverCell(cell) {
+    state.hoverCell = cell;
+    if (!map.getLayer('cbg-fill')) return;
+    if (cell === null) {
+      map.setPaintProperty('cbg-fill', 'fill-opacity', 0.88);
+      return;
+    }
+    var c1 = HX.data.monthSlice(comp.c1, state.monthIndex);
+    var c3 = HX.data.monthSlice(comp.c3, state.monthIndex);
+    var m = state.mode === 'absolute' ? null : { c1: means('c1'), c3: means('c3') };
+    var cells = HX.colour.bivariateCells(c1, c3, m);
+    var flags = new Uint8Array(cells.length);
+    for (var i = 0; i < cells.length; i++) flags[i] = cells[i] === cell ? 1 : 0;
+    map.setPaintProperty('cbg-fill', 'fill-opacity',
+      HX.colour.matchExpression(flags, [0.15, 0.95]));
+  }
+
+  function setView(v) {
+    state.view = v;
+    buildLegend();
+    repaint();
+    drawMeanStrip();
+    renderControls();
+  }
+
+  function setMode(m) {
+    state.mode = m;
+    var w = document.getElementById('mode-warning');
+    w.textContent = REGIME_WARNING;
+    show(w, m === 'absolute');
+    repaint();
+    renderControls();
+  }
+
+  function radio(container, options, current, onPick) {
+    container.innerHTML = '';
+    options.forEach(function (o) {
+      var b = document.createElement('button');
+      b.className = 'radio' + (o.value === current ? ' active' : '');
+      b.textContent = o.label;
+      b.addEventListener('click', function () { onPick(o.value); });
+      container.appendChild(b);
+    });
+  }
+
+  function renderControls() {
+    radio(document.getElementById('view-controls'), [
+      { value: 'exposure', label: 'Exposure' },
+      { value: 'reach', label: 'Reach' }
+    ], state.view, setView);
+    radio(document.getElementById('mode-controls'), [
+      { value: 'relative', label: 'Relative' },
+      { value: 'absolute', label: 'Absolute' }
+    ], state.mode, setMode);
+  }
+
   async function init() {
     try {
       mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -238,6 +335,8 @@
 
       addLayers(topojson.feature(topo, topo.objects.data));
       repaint();
+      buildLegend();
+      renderControls();
       bindTransport();
       drawMeanStrip();
       show(document.getElementById('loading'), false);
@@ -251,7 +350,10 @@
   }
 
   window.HX = window.HX || {};
-  window.HX.app = { state: state, repaint: repaint, setMonth: setMonth, play: play, pause: pause };
+  window.HX.app = {
+    state: state, repaint: repaint, setMonth: setMonth, play: play, pause: pause,
+    setView: setView, setMode: setMode
+  };
 
   if (document.readyState !== 'loading') init();
   else document.addEventListener('DOMContentLoaded', init);
