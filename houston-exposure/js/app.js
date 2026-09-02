@@ -106,6 +106,68 @@
       '. Try reloading the page.</p>';
   }
 
+  var playTimer = null;
+
+  function setMonth(i) {
+    var n = HX.data.N_MONTH;
+    state.monthIndex = ((i % n) + n) % n;
+    document.getElementById('month-slider').value = state.monthIndex;
+    repaint();
+    drawMeanStrip();
+    if (state.selectedIdx !== null) renderDetail(state.selectedIdx);
+  }
+
+  function pause() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    document.getElementById('play').innerHTML = '&#9654;';
+  }
+
+  function play() {
+    if (playTimer) return pause();
+    document.getElementById('play').innerHTML = '&#10073;&#10073;';
+    playTimer = setInterval(function () {
+      setMonth(state.monthIndex + 1);
+    }, 111);                                   // ~9 fps -> 72 months in ~8 s
+  }
+
+  /* The strip is both a scrub target and the honest disclosure of the
+     2023/2024 data-supply regimes, which are plainly visible as level steps. */
+  function drawMeanStrip() {
+    var cv = document.getElementById('mean-strip');
+    var ctx = cv.getContext('2d');
+    var ch = state.view === 'reach' ? 'c2' : 'c1';
+    var vals = meta.monthly_mean_uint8[ch];
+    var w = cv.width, h = cv.height;
+    ctx.clearRect(0, 0, w, h);
+
+    var bw = w / vals.length;
+    for (var i = 0; i < vals.length; i++) {
+      var bad = meta.flags.bad_months.indexOf(meta.months[i]) !== -1;
+      var y = h - (vals[i] / 255) * h;
+      ctx.fillStyle = bad ? '#fab219'
+        : (i === state.monthIndex ? '#f8fafc' : 'rgba(148,163,184,0.45)');
+      ctx.fillRect(i * bw, y, Math.max(1, bw - 1), h - y);
+    }
+  }
+
+  function bindTransport() {
+    document.getElementById('month-slider').addEventListener('input', function (e) {
+      pause();
+      setMonth(parseInt(e.target.value, 10));
+    });
+    document.getElementById('play').addEventListener('click', play);
+    document.getElementById('mean-strip').addEventListener('click', function (e) {
+      pause();
+      var r = e.target.getBoundingClientRect();
+      setMonth(Math.floor((e.clientX - r.left) / r.width * HX.data.N_MONTH));
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft') { pause(); setMonth(state.monthIndex - 1); }
+      else if (e.key === 'ArrowRight') { pause(); setMonth(state.monthIndex + 1); }
+      else if (e.key === ' ') { e.preventDefault(); play(); }
+    });
+  }
+
   async function init() {
     try {
       mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -135,6 +197,8 @@
 
       addLayers(topojson.feature(topo, topo.objects.data));
       repaint();
+      bindTransport();
+      drawMeanStrip();
       show(document.getElementById('loading'), false);
 
       HX.app.map = map;
@@ -146,7 +210,7 @@
   }
 
   window.HX = window.HX || {};
-  window.HX.app = { state: state, repaint: repaint };
+  window.HX.app = { state: state, repaint: repaint, setMonth: setMonth, play: play, pause: pause };
 
   if (document.readyState !== 'loading') init();
   else document.addEventListener('DOMContentLoaded', init);
