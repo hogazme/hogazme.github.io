@@ -7,6 +7,10 @@
   var HOUSTON_ZOOM = 8.6;
   var MAP_STYLE = 'mapbox://styles/mapbox/streets-v12';
 
+  /* Bump whenever data/ is rebuilt. Appended to every data URL so a browser
+     or CDN cache of the previous build can never be served against new code. */
+  var DATA_VERSION = '2026-09-03b';
+
   /* Fill opacity thins as you zoom in so streets, parks and water read
      through the colour; hairline strokes keep the polygons legible. The
      zoom curve must be the top-level expression (Mapbox only allows
@@ -662,9 +666,9 @@
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
       var results = await Promise.all([
-        fetch('data/meta.json').then(function (r) { return r.json(); }),
-        fetch('data/components.bin').then(function (r) { return r.arrayBuffer(); }),
-        fetch('data/houston_cbgs.topo.json').then(function (r) { return r.json(); }),
+        fetch('data/meta.json?v=' + DATA_VERSION).then(function (r) { return r.json(); }),
+        fetch('data/components.bin?v=' + DATA_VERSION).then(function (r) { return r.arrayBuffer(); }),
+        fetch('data/houston_cbgs.topo.json?v=' + DATA_VERSION).then(function (r) { return r.json(); }),
         /* style.load, not load: load waits on every tile source and stalls
            when one is unreachable, but addLayer only needs the style parsed. */
         new Promise(function (res) { map.once('style.load', res); })

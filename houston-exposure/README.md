@@ -149,6 +149,11 @@ Payload ≈ 2.9 MB. A month change is one `setPaintProperty` with a memoised `ma
 expression grouped by colour (≤ 9 branches), so 72-month autoplay at ~9 fps is a single
 GPU repaint per frame.
 
+**Data fetches carry a version.** `DATA_VERSION` in `js/app.js` is appended to every
+`data/` URL. GitHub Pages caches for 10 minutes and browsers longer, so without it a
+rebuild of `data/` can be served against new code (the Galveston Bay tract kept appearing
+for one viewer after it was removed). Bump it whenever `tools/build_data.py` is re-run.
+
 ## Verifying
 
 Unit tests: `node --test tests/*.test.js` from this directory (18 tests).
