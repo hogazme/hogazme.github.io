@@ -14,18 +14,24 @@
   var N_MONTH = 72;
   var PLANE = N_CBG * N_MONTH;          // 208152
 
-  /* components.bin is three contiguous uint8 planes (c1, c2, c3).
+  var N_PLANE = 5;
+
+  /* components.bin is five contiguous uint8 planes: c1, c2, c3 (pooled
+     percentile ranks of PC1-3), rg (pooled percentile rank of the activity
+     radius of gyration) and rgkm (that radius in km x 2, for display).
      Within a plane: offset = monthIndex * N_CBG + cbgIdx. */
   function decodeComponents(arrayBuffer) {
     var all = new Uint8Array(arrayBuffer);
-    if (all.length !== PLANE * 3) {
-      throw new Error('components.bin must be ' + PLANE * 3 +
+    if (all.length !== PLANE * N_PLANE) {
+      throw new Error('components.bin must be ' + PLANE * N_PLANE +
                       ' bytes, got ' + all.length);
     }
     return {
       c1: all.subarray(0, PLANE),
       c2: all.subarray(PLANE, PLANE * 2),
-      c3: all.subarray(PLANE * 2, PLANE * 3)
+      c3: all.subarray(PLANE * 2, PLANE * 3),
+      rg: all.subarray(PLANE * 3, PLANE * 4),
+      rgkm: all.subarray(PLANE * 4, PLANE * 5)
     };
   }
 
@@ -51,6 +57,7 @@
     N_CBG: N_CBG,
     N_MONTH: N_MONTH,
     PLANE: PLANE,
+    N_PLANE: N_PLANE,
     decodeComponents: decodeComponents,
     monthSlice: monthSlice,
     valueAt: valueAt,

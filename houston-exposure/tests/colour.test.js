@@ -4,13 +4,13 @@ const C = require('../js/colour.js');
 
 test('palette and ramp are the validated values', () => {
   assert.deepStrictEqual(C.PALETTE, [
-    '#243044', '#825b4a', '#e8833a',
-    '#42689a', '#9a9196', '#f1b785',
-    '#60a5fa', '#acc9e5', '#f5e9c8'
+    '#dcd6cc', '#e2a780', '#e0731f',
+    '#839fcf', '#8f798f', '#915150',
+    '#2b62c9', '#454790', '#4b2a5a'
   ]);
   assert.deepStrictEqual(C.REACH_RAMP, [
-    '#2a78d6', '#3c6aa4', '#455b76', '#4a4a48',
-    '#784b46', '#a34842', '#d03b3b'
+    '#1d5fb8', '#6d9fd8', '#bcd3ea', '#cfcbc2',
+    '#f0b89b', '#e07a55', '#b5301f'
   ]);
 });
 

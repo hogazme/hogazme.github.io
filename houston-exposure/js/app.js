@@ -5,7 +5,17 @@
 
   var HOUSTON_CENTER = [-95.3698, 29.7604];
   var HOUSTON_ZOOM = 8.6;
-  var MAP_STYLE = 'mapbox://styles/mapbox/dark-v11';
+  var MAP_STYLE = 'mapbox://styles/mapbox/streets-v12';
+
+  /* Fill opacity thins as you zoom in so streets, parks and water read
+     through the colour; hairline strokes keep the polygons legible. The
+     zoom curve must be the top-level expression (Mapbox only allows
+     ['zoom'] there), so the per-feature isolate is folded into each stop. */
+  function zoomOpacity(inner) {
+    function at(base) { return inner === undefined ? base : ['*', base, inner]; }
+    return ['interpolate', ['linear'], ['zoom'],
+      8, at(0.82), 10.5, at(0.62), 13, at(0.42)];
+  }
 
   var state = {
     monthIndex: 0,
@@ -28,8 +38,8 @@
   };
 
   var REACH_LABELS = [
-    'Much shorter trips than Houston', 'Shorter trips', 'Slightly shorter trips',
-    'Typical reach', 'Slightly longer trips', 'Longer trips', 'Much longer trips than Houston'
+    'Much tighter footprint than Houston', 'Tighter footprint', 'Slightly tighter footprint',
+    'Typical footprint', 'Slightly wider footprint', 'Wider footprint', 'Much wider footprint than Houston'
   ];
 
   var REGIME_WARNING =
@@ -41,7 +51,8 @@
   var VIEW_NOTES = {
     exposure: 'Two axes at once: how much richer the crowds a block group travels into are ' +
       '(up) and how racially unlike them they are (right).',
-    reach: 'One axis: how far its residents travel, blue for shorter than Houston, red for longer.'
+    reach: 'One axis: the radius of the area a block group’s residents actually cover in a month ' +
+      '(radius of gyration of the places they visit). Blue is tighter than Houston, red is wider.'
   };
 
   var MODE_NOTES = {
@@ -87,9 +98,9 @@
       expr = HX.colour.matchExpression(
         HX.colour.bivariateCells(c1, c3, m), HX.colour.PALETTE);
     } else {
-      var c2 = HX.data.monthSlice(comp.c2, state.monthIndex);
+      var rg = HX.data.monthSlice(comp.rg, state.monthIndex);
       expr = HX.colour.matchExpression(
-        HX.colour.reachSteps(c2, means('c2')), HX.colour.REACH_RAMP);
+        HX.colour.reachSteps(rg, means('rg')), HX.colour.REACH_RAMP);
     }
     exprCache[key] = expr;
     return expr;
@@ -103,27 +114,40 @@
     if (state.hoverCell !== null) setHoverCell(state.hoverCell);
   }
 
+  /* Slot our layers under the basemap's water, roads and labels so the
+     street network and place names draw crisply on top of the colour. */
+  function firstBasemapDetailLayer() {
+    var layers = map.getStyle().layers;
+    for (var i = 0; i < layers.length; i++) {
+      var l = layers[i];
+      if (l.type === 'line' || l.type === 'symbol' || /water/.test(l.id)) return l.id;
+    }
+    return undefined;
+  }
+
   function addLayers(geojson) {
     map.addSource('cbgs', { type: 'geojson', data: geojson, promoteId: 'cbg_geoid' });
 
     propsByIdx = new Array(HX.data.N_CBG);
     geojson.features.forEach(function (f) { propsByIdx[f.properties.idx] = f.properties; });
 
+    var before = firstBasemapDetailLayer();
+
     map.addLayer({
       id: 'cbg-fill',
       type: 'fill',
       source: 'cbgs',
-      paint: { 'fill-color': fillExpression(), 'fill-opacity': 0.88 }
-    });
+      paint: { 'fill-color': fillExpression(), 'fill-opacity': zoomOpacity() }
+    }, before);
 
     /* Hairline stroke on every polygon. Not decoration: it separates the
-       darkest palette cell from the basemap regardless of fill. */
+       palest palette cell from the land colour regardless of fill. */
     map.addLayer({
       id: 'cbg-line',
       type: 'line',
       source: 'cbgs',
-      paint: { 'line-color': 'rgba(148, 163, 184, 0.22)', 'line-width': 0.5 }
-    });
+      paint: { 'line-color': 'rgba(15, 23, 42, 0.28)', 'line-width': 0.5 }
+    }, before);
 
     /* The 168 CBGs whose ACS median income is 0 and whose income-gap features
        are Houston-median fills. Always visible, in every view. */
@@ -133,7 +157,7 @@
       source: 'cbgs',
       filter: ['==', ['get', 'imputed_income'], 1],
       paint: {
-        'line-color': 'rgba(250, 178, 25, 0.55)',
+        'line-color': 'rgba(180, 83, 9, 0.85)',
         'line-width': 1,
         'line-dasharray': [2, 2]
       }
@@ -144,7 +168,7 @@
       type: 'line',
       source: 'cbgs',
       filter: ['==', ['get', 'idx'], -1],
-      paint: { 'line-color': '#f8fafc', 'line-width': 2 }
+      paint: { 'line-color': '#0f172a', 'line-width': 2.5 }
     });
   }
 
@@ -197,7 +221,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
-    var ch = state.view === 'reach' ? 'c2' : 'c1';
+    var ch = state.view === 'reach' ? 'rg' : 'c1';
     var vals = meta.monthly_mean_uint8[ch];
     var n = vals.length;
     var top = 13, bottom = H - 4;            // leave room for the regime labels
@@ -297,7 +321,7 @@
 
     if (state.view === 'reach') {
       $('legend-yaxis').style.display = 'none';
-      $('legend-xaxis').firstElementChild.textContent = 'shorter trips to longer trips';
+      $('legend-xaxis').firstElementChild.textContent = 'tighter footprint to wider footprint';
       wrap.style.gridTemplateColumns = '0 auto';
       HX.colour.REACH_RAMP.forEach(function (c, i) {
         var d = document.createElement('div');
@@ -351,7 +375,7 @@
     state.hoverCell = cell;
     if (!map.getLayer('cbg-fill')) return;
     if (cell === null) {
-      map.setPaintProperty('cbg-fill', 'fill-opacity', 0.88);
+      map.setPaintProperty('cbg-fill', 'fill-opacity', zoomOpacity());
       return;
     }
     var c1 = HX.data.monthSlice(comp.c1, state.monthIndex);
@@ -361,13 +385,13 @@
     var flags = new Uint8Array(cells.length);
     for (var i = 0; i < cells.length; i++) flags[i] = cells[i] === cell ? 1 : 0;
     map.setPaintProperty('cbg-fill', 'fill-opacity',
-      HX.colour.matchExpression(flags, [0.15, 0.95], 0.15));
+      zoomOpacity(HX.colour.matchExpression(flags, [0.18, 1.15], 0.18)));
   }
 
   function setView(v) {
     state.view = v;
     state.hoverCell = null;
-    map.setPaintProperty('cbg-fill', 'fill-opacity', 0.88);
+    map.setPaintProperty('cbg-fill', 'fill-opacity', zoomOpacity());
     buildLegend();
     repaint();
     drawMeanStrip();
@@ -421,6 +445,11 @@
     };
   }
 
+  function radiusKm(idx, monthIndex) {
+    var m = monthIndex === undefined ? state.monthIndex : monthIndex;
+    return HX.data.valueAt(comp.rgkm, m, idx) / 2;
+  }
+
   function ordinal(n) {
     var s = ['th', 'st', 'nd', 'rd'], v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
@@ -459,7 +488,7 @@
     var p = propsByIdx[idx];
     var cell = cellOf(idx);
     var e = reading(comp.c1, 'c1', idx);
-    var r = reading(comp.c2, 'c2', idx);
+    var r = reading(comp.rg, 'rg', idx);
     var d = reading(comp.c3, 'c3', idx);
     var money = p.median_household_income
       ? '$' + Math.round(p.median_household_income).toLocaleString() : 'not reported';
@@ -477,12 +506,12 @@
       '<div class="detail-row"><span>Exposure gap</span>' +
         '<b>' + ordinal(e.pct) + ' pct</b><small>rank ' + e.rank.toLocaleString() + ' of 2,891</small></div>' +
       sparkline(comp.c1, 'c1', idx, '#60a5fa') +
-      '<div class="detail-row"><span>Trip reach</span>' +
-        '<b>' + ordinal(r.pct) + ' pct</b><small>rank ' + r.rank.toLocaleString() + ' of 2,891</small></div>' +
-      sparkline(comp.c2, 'c2', idx, '#a34842') +
       '<div class="detail-row"><span>Racial dissimilarity</span>' +
         '<b>' + ordinal(d.pct) + ' pct</b><small>rank ' + d.rank.toLocaleString() + ' of 2,891</small></div>' +
       sparkline(comp.c3, 'c3', idx, '#e8833a') +
+      '<div class="detail-row"><span>Activity radius</span>' +
+        '<b>' + radiusKm(idx).toFixed(1) + ' km</b><small>' + ordinal(r.pct) + ' pct, rank ' + r.rank.toLocaleString() + '</small></div>' +
+      sparkline(comp.rg, 'rg', idx, '#b5301f') +
       '<div class="detail-demo">' +
         'Population <b>' + (p.tot_pop || 0).toLocaleString() + '</b>, median income <b>' + money + '</b><br>' +
         'Bachelor’s <b>' + Math.round((p.bachelors_degree_pct || 0) * 100) + '%</b>, ' +
@@ -512,15 +541,15 @@
         HX.colour.PALETTE[cell] + '"></span>' + HX.colour.CELL_LABELS[cell] + '</div>';
     } else {
       var step = HX.colour.reachSteps(
-        new Uint8Array([HX.data.valueAt(comp.c2, state.monthIndex, idx)]), means('c2'))[0];
+        new Uint8Array([HX.data.valueAt(comp.rg, state.monthIndex, idx)]), means('rg'))[0];
       head = '<div class="tt-cell"><span class="swatch" style="background:' +
         HX.colour.REACH_RAMP[step] + '"></span>' + REACH_LABELS[step] + '</div>';
     }
-    var e = reading(comp.c1, 'c1', idx), r = reading(comp.c2, 'c2', idx), d = reading(comp.c3, 'c3', idx);
+    var e = reading(comp.c1, 'c1', idx), r = reading(comp.rg, 'rg', idx), d = reading(comp.c3, 'c3', idx);
     return head +
       '<div class="tt-row"><span>Exposure gap</span><b>' + ordinal(e.pct) + ' pct</b></div>' +
-      '<div class="tt-row"><span>Trip reach</span><b>' + ordinal(r.pct) + ' pct</b></div>' +
       '<div class="tt-row"><span>Racial dissimilarity</span><b>' + ordinal(d.pct) + ' pct</b></div>' +
+      '<div class="tt-row"><span>Activity radius</span><b>' + radiusKm(idx).toFixed(1) + ' km · ' + ordinal(r.pct) + ' pct</b></div>' +
       '<div class="tt-id">' + placeName(p.cbg_geoid) +
       (p.imputed_income === 1 ? ' · income imputed' : '') + '</div>';
   }
@@ -569,8 +598,8 @@
     var el = $('intro-legend');
     [[6, 'Blue: much richer crowds, similar race'],
      [2, 'Orange: similar incomes, very different race'],
-     [0, 'Slate: among people like itself'],
-     [8, 'Cream: unlike on both']].forEach(function (pair) {
+     [0, 'Pale grey: among people like itself'],
+     [8, 'Dark plum: unlike on both']].forEach(function (pair) {
       var d = document.createElement('div');
       d.innerHTML = '<span class="swatch" style="background:' + HX.colour.PALETTE[pair[0]] +
         '"></span><span>' + pair[1] + '</span>';
@@ -636,7 +665,9 @@
         fetch('data/meta.json').then(function (r) { return r.json(); }),
         fetch('data/components.bin').then(function (r) { return r.arrayBuffer(); }),
         fetch('data/houston_cbgs.topo.json').then(function (r) { return r.json(); }),
-        new Promise(function (res) { map.on('load', res); })
+        /* style.load, not load: load waits on every tile source and stalls
+           when one is unreachable, but addLayer only needs the style parsed. */
+        new Promise(function (res) { map.once('style.load', res); })
       ]);
       meta = results[0];
       comp = HX.data.decodeComponents(results[1]);

@@ -10,11 +10,16 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  /* Row-major, low -> high PC1. The legend draws bottom-up; this array does not. */
+  /* Row-major, low -> high PC1. The legend draws bottom-up; this array does not.
+     Bilinear in OKLab between four corners, for a LIGHT basemap: the low-low
+     corner is a pale warm grey that recedes into the land colour; blue = richer
+     crowds; orange = racially unlike crowds; the high-high corner is a dark plum
+     so "unlike on both" is the cell that pops. Validated against surface #efece4
+     (corners + centre, all pairs): CVD worst 14.6, normal-vision worst 17.7. */
   var PALETTE = [
-    '#243044', '#825b4a', '#e8833a',   // 0,1,2  low  PC1
-    '#42689a', '#9a9196', '#f1b785',   // 3,4,5  mid  PC1
-    '#60a5fa', '#acc9e5', '#f5e9c8'    // 6,7,8  high PC1
+    '#dcd6cc', '#e2a780', '#e0731f',   // 0,1,2  low  PC1
+    '#839fcf', '#8f798f', '#915150',   // 3,4,5  mid  PC1
+    '#2b62c9', '#454790', '#4b2a5a'    // 6,7,8  high PC1
   ];
 
   var CELL_LABELS = [
@@ -29,10 +34,11 @@
     'Richer and racially unlike crowds'
   ];
 
-  /* Diverging blue <-> red, neutral grey midpoint; symmetric OKLab lightness. */
+  /* Diverging blue <-> red with a light neutral midpoint, for the light
+     basemap: tighter footprint than Houston in blue, wider in red. */
   var REACH_RAMP = [
-    '#2a78d6', '#3c6aa4', '#455b76', '#4a4a48',
-    '#784b46', '#a34842', '#d03b3b'
+    '#1d5fb8', '#6d9fd8', '#bcd3ea', '#cfcbc2',
+    '#f0b89b', '#e07a55', '#b5301f'
   ];
 
   var LOW_CUT = 85;

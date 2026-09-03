@@ -15,6 +15,10 @@ import pandas as pd
 SRC = os.environ.get(
     "HX_EMBED_DIR",
     r"C:/Users/mobix/projects/mobility_detection_paper/houston_embedding")
+PANEL = os.environ.get(
+    "HX_PANEL_CSV",
+    r"C:/Users/mobix/projects/mobility_detection_paper_SI/panels/"
+    r"Houston-Pasadena-The Woodlands, TX_panel.csv")
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(HERE), "data")
 
@@ -67,6 +71,55 @@ def load_components():
         assert v.min() == 0 and v.max() == 255, f"{col} does not span 0-255"
         planes[k, mi, gi] = v
     return geoids, months, planes
+
+
+def load_reach(geoids, months):
+    """Radius of gyration of the activity footprint, one number per CBG-month.
+
+    The panel carries rg per category (km). The shipped value is the
+    visit-share-weighted mean over categories with a defined rg, i.e. the
+    footprint radius of where this community's visits actually went. Two
+    planes: pooled percentile rank as uint8 (the colour channel, same
+    convention as c1-c3) and km x 2 as uint8 (for display; 0.5 km steps,
+    clamps at 127.5 km which no CBG-month reaches)."""
+    head = pd.read_csv(PANEL, nrows=1)
+    rg_cols = [c for c in head.columns if c.startswith("rg_")]
+    assert len(rg_cols) == 11, f"expected 11 rg_ columns, got {len(rg_cols)}"
+    pct_cols = ["pct_" + c[3:] for c in rg_cols]
+    assert all(c in head.columns for c in pct_cols), "pct_ columns missing"
+    df = pd.read_csv(PANEL, usecols=["CBG", "year_month"] + rg_cols + pct_cols)
+    df = df[df["CBG"].isin(set(int(g) for g in geoids))]
+    assert len(df) == N_CBG * N_MONTH, f"panel has {len(df)} rows for our CBGs"
+    assert df.duplicated(["CBG", "year_month"]).sum() == 0
+
+    rg = df[rg_cols].to_numpy(dtype=float)
+    w = df[pct_cols].to_numpy(dtype=float)
+    w = np.where(np.isnan(rg), 0.0, w)
+    wsum = w.sum(axis=1)
+    assert (wsum > 0).all(), "a CBG-month has no category with a defined rg"
+    overall = np.nansum(rg * w, axis=1) / wsum
+    assert np.isfinite(overall).all()
+
+    # Pooled percentile rank over all 208,152 rows, scaled to 0-255 like c1-c3.
+    order = overall.argsort(kind="stable")
+    ranks = np.empty(len(overall), dtype=float)
+    ranks[order] = np.arange(len(overall))
+    pct = np.round(ranks / (len(overall) - 1) * 255).astype(np.uint8)
+    km2 = np.clip(np.round(overall * 2), 0, 255).astype(np.uint8)
+
+    gpos = {int(g): i for i, g in enumerate(geoids)}
+    mpos = {m: i for i, m in enumerate(months)}
+    gi = df["CBG"].map(gpos).to_numpy()
+    mi = df["year_month"].map(mpos).to_numpy()
+    planes = np.zeros((2, N_MONTH, N_CBG), dtype=np.uint8)
+    planes[0, mi, gi] = pct
+    planes[1, mi, gi] = km2
+    assert planes[0].min() == 0 and planes[0].max() == 255
+    monthly_mean = [float(planes[0, m].mean()) for m in range(N_MONTH)]
+    stats = {"median_km": round(float(np.median(overall)), 2),
+             "p10_km": round(float(np.percentile(overall, 10)), 2),
+             "p90_km": round(float(np.percentile(overall, 90)), 2)}
+    return planes, monthly_mean, stats
 
 
 def _income_gap_cols(columns):
@@ -132,11 +185,14 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     geoids, months, planes = load_components()
     imputed = load_imputed_cbgs()
+    reach, reach_mean, reach_stats = load_reach(geoids, months)
     print(f"  {len(geoids)} CBGs x {len(months)} months; "
-          f"{len(imputed)} imputed-income CBGs")
+          f"{len(imputed)} imputed-income CBGs; reach median {reach_stats['median_km']} km")
 
+    # Five planes: c1, c2, c3, rg percentile, rg km x 2.
     with open(os.path.join(OUT, "components.bin"), "wb") as f:
         f.write(planes.tobytes(order="C"))
+        f.write(reach.tobytes(order="C"))
 
     results = json.load(open(os.path.join(SRC, "houston_embedding_results.json"),
                              encoding="utf-8"))
@@ -145,7 +201,7 @@ def main():
         "n_months": N_MONTH,
         "months": months,
         "cbg_geoids": [int(g) for g in geoids],
-        "monthly_mean_uint8": load_monthly_means(months),
+        "monthly_mean_uint8": dict(load_monthly_means(months), rg=reach_mean),
         "flags": {"bad_months": ["2022-12"], "regimes": REGIMES},
         "loadings": load_loadings(),
         "stats": {
@@ -156,6 +212,7 @@ def main():
             "morans_I_mean": round(results["part4c"]["monthly_I"]["mean"], 4),
             "n_islands": results["part4c"]["n_islands_zero_degree_excluded"],
             "n_imputed_cbgs": len(imputed),
+            "reach_km": reach_stats,
         },
     }
     with open(os.path.join(OUT, "meta.json"), "w", encoding="utf-8") as f:

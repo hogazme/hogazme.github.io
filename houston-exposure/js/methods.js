@@ -32,7 +32,8 @@
     ['Income exposure gap', 'expected median household income of the other visitors at the places visited, minus the community’s own'],
     ['Education exposure gap', 'the same, for bachelor’s-degree share'],
     ['Racial exposure dissimilarity', 'half the absolute difference between the racial mix of the crowds visited and the community’s own'],
-    ['Dwell', 'visit-weighted median dwell time at the places visited']
+    ['Dwell', 'visit-weighted median dwell time at the places visited'],
+    ['Activity radius', 'radius of gyration of the places visited: how spread out the month’s destinations are, independent of distance from home']
   ];
 
   var PCS = [
@@ -91,7 +92,7 @@
     h.push('</table>');
 
     h.push('<p>For each block-group-month, seven measures are computed within each category, ' +
-      'giving 7 × 11 = 77 features. Exposure measures compare the block group’s own ' +
+      'giving 8 × 11 = 88 features; the first seven families (77 features) feed the projection. Exposure measures compare the block group’s own ' +
       'ACS profile to the visit-weighted profile of everyone else who visits the same places.</p>');
     h.push('<ul>');
     FAMILIES.forEach(function (f) {
@@ -118,6 +119,11 @@
       h.push('</div></div></div>');
     });
 
+    h.push('<p>The map’s “how far they go” view does not use PC2. It shows the activity radius ' +
+      'directly: the radius of gyration of each block group’s visited places, weighted by visit ' +
+      'share across the eleven categories, converted to a pooled percentile rank exactly like the ' +
+      'components. Houston’s median is ' + s.reach_km.median_km + ' km; the 10th and 90th ' +
+      'percentiles are ' + s.reach_km.p10_km + ' and ' + s.reach_km.p90_km + ' km.</p>');
     h.push('<p>Each component is close to a uniform average of one measure family across all ' +
       'eleven categories: the dominant structure in Houston’s movement is <em>which kind</em> ' +
       'of difference a community travels into, not <em>where</em> it goes. What kinds of places ' +
@@ -127,9 +133,9 @@
     h.push('<h3>From components to colour</h3>');
     h.push('<p>Each component is converted to a percentile rank pooled over all block-group-months, ' +
       'stored as a byte (0–255). The map view splits the exposure gap (PC1) and racial ' +
-      'dissimilarity (PC3) into terciles at 85 and 170 and paints the 3 × 3 cell. Lightness ' +
+      'dissimilarity (PC3) into terciles at 85 and 170 and paints the 3 × 3 cell. Darkness ' +
       'is how unlike the encountered crowds are overall; hue is which kind of unlikeness. The ' +
-      'reach view paints PC2 alone on a seven-step diverging scale.</p>');
+      'reach view paints the activity radius alone on a seven-step diverging scale.</p>');
     h.push('<p><b>Relative</b> (the default) subtracts each month’s Houston-wide mean before ' +
       'cutting, so a block group’s colour says how it compares to the rest of Houston in ' +
       'that month. <b>Absolute</b> cuts the pooled ranks directly, so colours are comparable ' +
@@ -171,7 +177,7 @@
     h.push('<h3>Files</h3>');
     h.push('<ul>');
     h.push('<li><a href="data/meta.json">meta.json</a> — months, block-group ids, monthly means, loadings, summary statistics</li>');
-    h.push('<li><a href="data/components.bin">components.bin</a> — three planes of 208,152 bytes: PC1, PC2, PC3 as pooled percentile ranks, month-major</li>');
+    h.push('<li><a href="data/components.bin">components.bin</a> — five planes of 208,152 bytes, month-major: PC1, PC2, PC3 and the activity radius as pooled percentile ranks, then the radius in half-kilometres</li>');
     h.push('<li><a href="data/houston_cbgs.topo.json">houston_cbgs.topo.json</a> — block-group geometry with baked ACS properties</li>');
     h.push('<li><a href="https://mobix.blogs.rice.edu/" target="_blank" rel="noopener">Mobility-X Lab</a>, Rice University</li>');
     h.push('</ul>');

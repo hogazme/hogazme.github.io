@@ -79,7 +79,37 @@ a second fill layer; the outline reads clearly at every zoom and costs nothing.
 820 px the map stacks above a scrolling sidebar, the intro becomes a full-height
 scrollable sheet, and the transport compacts.
 
-## Colour, unchanged from the spec
+## Revisions after the first review (2026-09-03)
+
+**Light basemap.** `streets-v12` instead of `dark-v11`, at the user's request ("think of how
+Google Maps looks"). The block-group layers are inserted *below* the basemap's water,
+roads and labels, so the street network and place names draw crisply over the colour.
+
+**Fills thin out as you zoom.** `fill-opacity` is a zoom curve (0.82 at z8 → 0.62 at
+z10.5 → 0.42 at z13) so the map underneath reads through once you zoom in. The legend
+isolate multiplies into each stop of that curve, because Mapbox only allows `['zoom']`
+at the top level of an expression.
+
+**Palette re-derived for a light surface.** The spec's palette was validated against the
+dark ground and its "unlike on both" corner was cream, which vanishes on a light map. The
+new grid keeps the hue semantics (blue = richer crowds, orange = racially unlike crowds,
+the recessive corner = "like itself") but flips the lightness axis: pale warm grey
+`#dcd6cc` for like-itself, dark plum `#4b2a5a` for unlike-on-both. Bilinear in OKLab from
+four corners; validated on surface `#efece4`, corners + centre, all pairs: CVD ΔE 14.6,
+normal-vision 17.7. The same two out-of-scope FAILs (lightness band, chroma floor) and the
+same contrast WARN on the pale corner apply, discharged the same way (hairline strokes,
+tooltip, detail card). The reach ramp became a light-midpoint blue↔red.
+
+**"How far they go" now shows the radius of gyration, not PC2.** The panel gained an `rg`
+family (per-category radius of gyration of visited places, km). The shipped value is the
+visit-share-weighted mean across categories with a defined radius, i.e. the spatial extent
+of where the community's visits actually went, independent of distance from home. It is
+converted to pooled percentile ranks exactly like the components (plane 4 of
+`components.bin`) and shipped alongside in half-kilometres (plane 5) so the tooltip and
+detail card can state it in km. Houston median 13.4 km. PC2 remains in the binary and in
+the methods panel as part of the projection, but nothing on the map uses it.
+
+## Colour
 
 The bivariate palette and the diverging reach ramp are the validated values from spec §3
 and are not touched. The two documented validator deviations still hold and are still
@@ -103,12 +133,12 @@ js/data.js          components.bin decoding, month slices, ranks      (unit-test
 js/colour.js        palette, tercile classes, relative offsets, match expressions (unit-tested)
 js/methods.js       Methods & data panel: meta.json -> HTML
 js/app.js           map, layers, controls, detail card, tooltip, intro, methods wiring
-data/               components.bin (624,456 B), meta.json, houston_cbgs.topo.json
+data/               components.bin (1,040,760 B, 5 planes), meta.json, houston_cbgs.topo.json
 tools/build_data.py regenerates data/ from mobility_detection_paper/houston_embedding/
 tests/              node --test tests/*.test.js
 ```
 
-Payload ≈ 2.5 MB. A month change is one `setPaintProperty` with a memoised `match`
+Payload ≈ 2.9 MB. A month change is one `setPaintProperty` with a memoised `match`
 expression grouped by colour (≤ 9 branches), so 72-month autoplay at ~9 fps is a single
 GPU repaint per frame.
 
@@ -117,7 +147,9 @@ GPU repaint per frame.
 Unit tests: `node --test tests/*.test.js` from this directory (18 tests).
 
 Browser: the Mapbox token is URL-restricted to `hogazme.github.io`, so a local server
-renders the block groups but no basemap tiles (403s in the console are expected). Headless
+renders the block groups but no basemap tiles (403s in the console are expected), and
+with no style loaded the layer-ordering heuristic has nothing to slot under — anything
+that depends on the basemap has to be checked on the live site. Headless
 verification over CDP is described in the project memory; the checks that matter are that
 the loading overlay clears, four `cbg-*` layers exist, the legend isolate produces a
 `match` expression on `fill-opacity`, and Escape closes methods → intro → selection in
