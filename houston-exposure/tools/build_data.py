@@ -22,7 +22,13 @@ PANEL = os.environ.get(
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(os.path.dirname(HERE), "data")
 
-N_CBG, N_MONTH = 2891, 72
+N_UPSTREAM = 2891          # CBGs in the frozen projection
+# Tracts dropped from the dashboard after review. 48167723900 (Galveston County
+# tract 7239) is almost entirely open water in Galveston Bay; its three block
+# groups paint the bay itself. The projection was fit with them in (216 of
+# 208,152 rows); they are removed here, not refit.
+EXCLUDE_TRACTS = {"48167723900"}
+N_CBG, N_MONTH = 2888, 72
 
 REGIMES = [
     {"label": "A", "from": "2019-01", "to": "2022-11",
@@ -49,7 +55,12 @@ def _assert_unique_pairs(u):
 
 def load_components():
     u = pd.read_parquet(os.path.join(SRC, "houston_components_uint8.parquet"))
-    geoids = np.array(sorted(u["cbg_geoid"].unique()), dtype=np.int64)
+    all_geoids = sorted(u["cbg_geoid"].unique())
+    assert len(all_geoids) == N_UPSTREAM, f"expected {N_UPSTREAM} upstream CBGs"
+    dropped = [g for g in all_geoids if str(g)[:11] in EXCLUDE_TRACTS]
+    assert len(dropped) == N_UPSTREAM - N_CBG, f"exclusion removed {len(dropped)} CBGs"
+    u = u[~u["cbg_geoid"].isin(dropped)]
+    geoids = np.array([g for g in all_geoids if g not in set(dropped)], dtype=np.int64)
     months = sorted(u["year_month"].unique().tolist())
     assert len(geoids) == N_CBG, f"expected {N_CBG} CBGs, got {len(geoids)}"
     assert len(months) == N_MONTH, f"expected {N_MONTH} months, got {len(months)}"
@@ -57,7 +68,7 @@ def load_components():
     expected = pd.date_range("2019-01-01", "2024-12-01",
                              freq="MS").strftime("%Y-%m").tolist()
     assert months == expected, "months are not contiguous 2019-01..2024-12"
-    assert len(u) == N_CBG * N_MONTH, f"expected 208,152 rows, got {len(u)}"
+    assert len(u) == N_CBG * N_MONTH, f"expected {N_CBG * N_MONTH} rows, got {len(u)}"
     _assert_unique_pairs(u)
 
     gpos = {g: i for i, g in enumerate(geoids)}
@@ -142,10 +153,11 @@ def load_imputed_cbgs():
     return set(g.index[(g == N_MONTH).all(axis=1)].tolist())
 
 
-def load_monthly_means(months):
-    mm = pd.read_csv(os.path.join(SRC, "houston_monthly_component_means.csv"))
-    mm = mm.set_index("year_month").loc[months]
-    return {f"c{k}": [float(v) for v in mm[f"pc{k}_mean_uint8"]] for k in (1, 2, 3)}
+def monthly_means(planes):
+    """Houston-wide mean of each shipped channel per month, computed over the
+    shipped CBG set (not the upstream csv, which includes the excluded tract)."""
+    return {f"c{k + 1}": [float(planes[k, m].mean()) for m in range(N_MONTH)]
+            for k in range(3)}
 
 
 def load_loadings():
@@ -165,8 +177,11 @@ def build_topojson(geoids, imputed):
     if key != "data":
         topo["objects"]["data"] = topo["objects"].pop(key)
     geoms = topo["objects"]["data"]["geometries"]
-    assert len(geoms) == N_CBG, f"topojson has {len(geoms)} geometries"
+    assert len(geoms) == N_UPSTREAM, f"topojson has {len(geoms)} geometries"
     gpos = {int(g): i for i, g in enumerate(geoids)}
+    geoms = [g for g in geoms if int(g["properties"]["cbg_geoid"]) in gpos]
+    assert len(geoms) == N_CBG
+    topo["objects"]["data"]["geometries"] = geoms
     seen = set()
     for g in geoms:
         p = g["properties"]
@@ -184,7 +199,7 @@ def build_topojson(geoids, imputed):
 def main():
     os.makedirs(OUT, exist_ok=True)
     geoids, months, planes = load_components()
-    imputed = load_imputed_cbgs()
+    imputed = load_imputed_cbgs() & set(int(g) for g in geoids)
     reach, reach_mean, reach_stats = load_reach(geoids, months)
     print(f"  {len(geoids)} CBGs x {len(months)} months; "
           f"{len(imputed)} imputed-income CBGs; reach median {reach_stats['median_km']} km")
@@ -201,8 +216,9 @@ def main():
         "n_months": N_MONTH,
         "months": months,
         "cbg_geoids": [int(g) for g in geoids],
-        "monthly_mean_uint8": dict(load_monthly_means(months), rg=reach_mean),
-        "flags": {"bad_months": ["2022-12"], "regimes": REGIMES},
+        "monthly_mean_uint8": dict(monthly_means(planes), rg=reach_mean),
+        "flags": {"bad_months": ["2022-12"], "regimes": REGIMES,
+                  "excluded_tracts": sorted(EXCLUDE_TRACTS)},
         "loadings": load_loadings(),
         "stats": {
             "evr": [round(v, 4) for v in

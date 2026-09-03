@@ -1,6 +1,6 @@
 # Who Houston Meets — design notes
 
-Route: `hogazme.github.io/houston-exposure/`. A map of 2,891 Houston census block groups
+Route: `hogazme.github.io/houston-exposure/`. A map of 2,888 Houston census block groups
 over 72 months (2019-01 … 2024-12), each coloured by *who its residents encounter* when
 they go out. Static files only; no build step, no framework.
 
@@ -72,7 +72,7 @@ at a glance. The strip autoscales to the channel's own range and is drawn as a l
 bars, because bars from a truncated baseline overstate ratios.
 
 **Imputed-income block groups are outlined, not hatched.** A dashed amber outline on the
-168 CBGs whose ACS median income is 0. A true hatch fill needs a raster pattern image and
+167 CBGs whose ACS median income is 0. A true hatch fill needs a raster pattern image and
 a second fill layer; the outline reads clearly at every zoom and costs nothing.
 
 **Mobile layout exists.** The spec's shell was fixed at 370 px + `overflow: hidden`. Below
@@ -108,6 +108,13 @@ converted to pooled percentile ranks exactly like the components (plane 4 of
 `components.bin`) and shipped alongside in half-kilometres (plane 5) so the tooltip and
 detail card can state it in km. Houston median 13.4 km. PC2 remains in the binary and in
 the methods panel as part of the projection, but nothing on the map uses it.
+
+**Tract 7239 removed.** Galveston County tract `48167723900` is almost entirely open
+water in Galveston Bay; its three block groups painted the bay. They are excluded at the
+build step (`EXCLUDE_TRACTS` in `tools/build_data.py`), so the dashboard ships 2,888 block
+groups. The projection was fit upstream with them in (216 of 208,152 rows) and is not
+refit; rg percentiles, monthly means and the imputed-income count are recomputed over the
+shipped set. The upstream panel and embedding in the sibling repo still contain the tract.
 
 ## Colour
 

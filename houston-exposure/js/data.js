@@ -10,9 +10,9 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  var N_CBG = 2891;
+  var N_CBG = 2888;             // 2,891 upstream minus tract 48167723900 (open water)
   var N_MONTH = 72;
-  var PLANE = N_CBG * N_MONTH;          // 208152
+  var PLANE = N_CBG * N_MONTH;          // 207936
 
   var N_PLANE = 5;
 

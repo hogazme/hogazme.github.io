@@ -91,8 +91,8 @@
   }
 
   /* Build a Mapbox `match` expression keyed on the baked `idx` property.
-     Mapbox accepts an ARRAY of labels per branch, so 2,891 features collapse
-     to one branch per colour instead of 2,891 branches. Colours no feature
+     Mapbox accepts an ARRAY of labels per branch, so 2,888 features collapse
+     to one branch per colour instead of 2,888 branches. Colours no feature
      uses are omitted entirely.
      `fallback` defaults to a transparent colour (the historical behaviour for
      `fill-color` call sites); callers building a non-colour expression (e.g.

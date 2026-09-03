@@ -504,10 +504,10 @@
           'Its colour is partly an artefact.</p>'
         : '') +
       '<div class="detail-row"><span>Exposure gap</span>' +
-        '<b>' + ordinal(e.pct) + ' pct</b><small>rank ' + e.rank.toLocaleString() + ' of 2,891</small></div>' +
+        '<b>' + ordinal(e.pct) + ' pct</b><small>rank ' + e.rank.toLocaleString() + ' of ' + HX.data.N_CBG.toLocaleString() + '</small></div>' +
       sparkline(comp.c1, 'c1', idx, '#60a5fa') +
       '<div class="detail-row"><span>Racial dissimilarity</span>' +
-        '<b>' + ordinal(d.pct) + ' pct</b><small>rank ' + d.rank.toLocaleString() + ' of 2,891</small></div>' +
+        '<b>' + ordinal(d.pct) + ' pct</b><small>rank ' + d.rank.toLocaleString() + ' of ' + HX.data.N_CBG.toLocaleString() + '</small></div>' +
       sparkline(comp.c3, 'c3', idx, '#e8833a') +
       '<div class="detail-row"><span>Activity radius</span>' +
         '<b>' + radiusKm(idx).toFixed(1) + ' km</b><small>' + ordinal(r.pct) + ' pct, rank ' + r.rank.toLocaleString() + '</small></div>' +

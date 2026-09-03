@@ -12,22 +12,22 @@ function load() {
 }
 
 test('constants match the panel', () => {
-  assert.strictEqual(D.N_CBG, 2891);
+  assert.strictEqual(D.N_CBG, 2888);
   assert.strictEqual(D.N_MONTH, 72);
-  assert.strictEqual(D.PLANE, 208152);
+  assert.strictEqual(D.PLANE, 207936);
 });
 
-test('decodeComponents returns five planes of 208152', () => {
+test('decodeComponents returns five planes of 207936', () => {
   const c = load();
-  assert.strictEqual(c.c1.length, 208152);
-  assert.strictEqual(c.c2.length, 208152);
-  assert.strictEqual(c.rg.length, 208152);
-  assert.strictEqual(c.rgkm.length, 208152);
-  assert.strictEqual(c.c3.length, 208152);
+  assert.strictEqual(c.c1.length, 207936);
+  assert.strictEqual(c.c2.length, 207936);
+  assert.strictEqual(c.rg.length, 207936);
+  assert.strictEqual(c.rgkm.length, 207936);
+  assert.strictEqual(c.c3.length, 207936);
 });
 
 test('decodeComponents rejects a wrong-sized buffer', () => {
-  assert.throws(() => D.decodeComponents(new ArrayBuffer(10)), /1040760/);
+  assert.throws(() => D.decodeComponents(new ArrayBuffer(10)), /1039680/);
 });
 
 test('golden values for CBG index 0', () => {
@@ -39,10 +39,10 @@ test('golden values for CBG index 0', () => {
   assert.strictEqual(D.valueAt(c.c3, 71, 0), 95);
 });
 
-test('monthSlice is 2891 long and agrees with valueAt', () => {
+test('monthSlice is 2888 long and agrees with valueAt', () => {
   const c = load();
   const s = D.monthSlice(c.c1, 71);
-  assert.strictEqual(s.length, 2891);
+  assert.strictEqual(s.length, 2888);
   assert.strictEqual(s[0], 98);
   for (const i of [0, 1, 1000, 2890]) {
     assert.strictEqual(s[i], D.valueAt(c.c1, 71, i));
@@ -55,7 +55,7 @@ test('rankInMonth is 1-based and consistent with the slice', () => {
   const r = D.rankInMonth(c.c1, 0, 0);
   const below = Array.from(s).filter((v) => v < s[0]).length;
   assert.strictEqual(r, below + 1);
-  assert.ok(r >= 1 && r <= 2891);
+  assert.ok(r >= 1 && r <= 2888);
 });
 
 test('reach planes: percentile spans 0-255 and km values are plausible', () => {
