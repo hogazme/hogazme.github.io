@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traffic Model Check</title>
+<link rel="stylesheet" href="style.css">
+<script src="config.js" onerror="window.DASHBOARD_CONFIG = window.DASHBOARD_CONFIG || {}"></script>
+<script src="https://unpkg.com/deck.gl@9.0.0/dist.min.js"></script>
+</head>
+<body class="tr-page">
+<header id="top">
+  <h1>How traffic moves in the model (verification)</h1>
+  <div id="trMode" class="tr-seg" role="group" aria-label="Mode"></div>
+  <label>Origin <select id="trOrigin"></select></label>
+  <div id="trLoad" class="tr-seg" role="group" aria-label="Load"></div>
+  <div id="trWater" class="tr-seg" role="group" aria-label="Water"></div>
+  <label>Basemap <select id="basemap"></select></label>
+  <a class="tr-link" href="index.html">← Flood dashboard</a>
+  <span id="notice" hidden></span>
+</header>
+<main>
+  <section id="maps"><div id="mapA" class="map"></div>
+    <div id="clock" aria-live="off"></div><div id="legend"></div></section>
+  <aside id="side">
+    <div id="trRun" class="tr-run"></div>
+    <figure><figcaption id="trCap1">Vehicles over time</figcaption><svg id="trCum"></svg></figure>
+    <figure><figcaption id="trCap2">Arrivals per safe node</figcaption><div id="trNodes" class="tr-nodes"></div></figure>
+    <figure><figcaption>Checks of this run (export)</figcaption><div id="trChecks" class="tr-checks"></div></figure>
+    <div id="inspector"><p>Click a road or a dot.</p></div>
+  </aside>
+</main>
+<footer>
+  <button id="play" aria-label="Play">▶</button>
+  <input id="slider" type="range" min="0" value="0" step="1" aria-label="Time (minute frames)">
+  <span id="time"></span>
+  <label>Speed <select id="speed"></select></label>
+  <details id="layers"><summary>Layers</summary></details>
+  <p id="caption"></p>
+</footer>
+<script type="module" src="js/traffic.js"></script>
+</body>
+</html>
