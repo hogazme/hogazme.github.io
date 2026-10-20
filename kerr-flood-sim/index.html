@@ -4,7 +4,9 @@
 <meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kerr County Flood Simulation</title>
 <link rel="stylesheet" href="style.css">
-<script src="config.js" onerror="window.DASHBOARD_CONFIG = window.DASHBOARD_CONFIG || {}"></script>
+<!-- Mapbox basemap: reuse the site's public token (houston-exposure/js/config.js defines MAPBOX_TOKEN) -->
+<script src="../houston-exposure/js/config.js"></script>
+<script>window.DASHBOARD_CONFIG = (typeof MAPBOX_TOKEN !== "undefined") ? { mapboxToken: MAPBOX_TOKEN } : {};</script>
 <script src="https://unpkg.com/deck.gl@9.0.0/dist.min.js"></script>
 </head>
 <body>
