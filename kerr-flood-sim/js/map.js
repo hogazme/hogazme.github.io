@@ -95,8 +95,10 @@ export async function createMap(container, { token, style = "outdoors", bounds }
     map.once("load", res);
     map.once("error", (e) => { if (!map.loaded()) rej(new Error(e && e.error ? e.error.message : "map failed to load")); });
   });
-  // Interleaved: deck layers are drawn inside the map's layer stack, below the anchor layer (beforeId).
-  const overlay = new deck.MapboxOverlay({ interleaved: true, layers: [] });
+  // Not interleaved: deck draws on its own canvas above the map (beforeId is then ignored). deck.gl 9.0's interleaved
+  // mode updates its layers through map.getLayer(id).implementation, which Mapbox GL JS 3.9 no longer returns for
+  // custom layers, so every overlay update threw and stopped the page's frame updates (checked on the live site).
+  const overlay = new deck.MapboxOverlay({ interleaved: false, layers: [] });
   map.addControl(overlay);
   return { map, kind, overlay };
 }
@@ -128,10 +130,11 @@ export function nearestFlood(flood, ms) {
   for (const fr of flood.frames) { const d = Math.abs(cdtMs(fr.cdt) - ms); if (d < bd) { bd = d; best = fr; } }
   return best;
 }
-export function setFlood(m, flood, ms) {
+// urlOf(file) gives the image's URL (the story passes preloaded blob URLs, so a playing step switches images at once).
+export function setFlood(m, flood, ms, urlOf = (file) => `data/${file}`) {
   const fr = nearestFlood(flood, ms);
   if (fr.file !== m.floodFile) {
-    m.map.getSource("flood").updateImage({ url: `data/${fr.file}`, coordinates: flood.corners });
+    m.map.getSource("flood").updateImage({ url: urlOf(fr.file), coordinates: flood.corners });
     m.floodFile = fr.file;
   }
   return fr;

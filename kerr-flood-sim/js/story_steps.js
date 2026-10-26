@@ -9,10 +9,13 @@ const BASE = { study: true, homes: true };
 // (both computed from the data); an object is a fixed {center, zoom}. Every fit leaves room for the cards (story.js). clock: false hides the clock.
 // A stretch of the Guadalupe near Ingram with many closures by 05:00 (checked in the browser, Task 7).
 const ZOOM_CLOSURES = { center: [-99.24, 30.07], zoom: 13.3 };
+// The Guadalupe between Hunt and Ingram, close enough that the hourly flood images visibly widen (at the homes box the
+// channel is a few pixels wide and the water card looked static).
+const ZOOM_RIVER = { center: [-99.28, 30.068], zoom: 12.6 };
 export const STEPS = [
   { id: "title", scenario: "none", at: D(20), layers: BASE, camera: "study", chart: null },
   { id: "question", scenario: "none", at: D(20), layers: BASE, camera: "homes", chart: null },
-  { id: "water", scenario: "none", from: D(20), to: D(6), layers: { flood: true, river: true, study: true }, camera: "homes", chart: "gauge" },
+  { id: "water", scenario: "none", from: D(20), to: D(6), layers: { flood: true, river: true, study: true }, camera: ZOOM_RIVER, chart: "gauge" },
   { id: "roads", scenario: "none", from: D(22), to: D(6), layers: { closed: true, roads: true, study: true }, camera: "study", chart: null },
   { id: "roads-zoom", scenario: "none", at: D(5), layers: { flood: true, closed: true, roads: true }, camera: ZOOM_CLOSURES, chart: null },
   { id: "traffic", scenario: "forced10", from: D(22), to: "2025-07-03T23:30", layers: { roads: true, closed: true, study: true }, camera: "traffic", chart: null },

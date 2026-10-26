@@ -86,6 +86,7 @@ async function main() {
   if (!(await loadScenario("none", { roads: true, homes: true }))) throw new Error("the no-warning run (none) could not be loaded");
   note("load", null);
   await buildMap();
+  S.floodLoaded = preloadFlood();                 // in the background, next to phase 2
   S.ready = true;
   if (S.active) applyStep(S.active);
   // phase 2: the other strategies (home states and totals only), then the traffic test. A step waiting for one is
@@ -198,8 +199,25 @@ function applyStepState(step) {
   moveCamera(r.camera);
   $("popup").hidden = true;
   addPlayer(step, r);
-  if (r.play && !still.matches) animate(r.f0, r.f1, 8000);
-  else setFrame(r.f1);
+  if (!r.play || still.matches) { setFrame(r.f1); return; }
+  // a played step that shows the flood waits for the hourly images (requested one by one they arrive slower than the
+  // playback switches them, and the water seemed not to change); a later step or a replay finds them in memory
+  if (r.layers.flood && !S.floodDone) {
+    setFrame(r.f0);
+    note("wait", "Loading flood images…");
+    S.floodLoaded.then(() => { if (S.r === r) { note("wait", null); animate(r.f0, r.f1, 8000); } });
+    return;
+  }
+  animate(r.f0, r.f1, 8000);
+}
+// The hourly flood images, fetched once into memory as blob URLs; render() uses them (an image not in yet is
+// requested as before). Resolves when every image is in or has failed.
+function preloadFlood() {
+  S.floodUrl = {};
+  return Promise.all(S.flood.frames.map((fr) => fetch(`data/${fr.file}`)
+    .then((res) => (res.ok ? res.blob() : null))
+    .then((b) => { if (b) S.floodUrl[fr.file] = URL.createObjectURL(b); })
+    .catch(() => {}))).then(() => { S.floodDone = true; });
 }
 
 // The part of the map the cards, the clock and the chart panel leave free, as padding in pixels: on a desktop the
@@ -296,7 +314,7 @@ function thin(idx) {
 function render() {
   if (!S.r || !S.m) return;
   const f = S.f, ms = S.frames[f], k = S.k, d = S.data[k], sc = S.manifest.scenarios[k];
-  setFlood(S.m, S.flood, ms);
+  setFlood(S.m, S.flood, ms, (file) => (S.floodUrl && S.floodUrl[file]) || `data/${file}`);
   S.m.overlay.setProps({ layers: deckLayers({ key: k, f, ms, zoom: S.m.map.getZoom(), thin, groups: S.groups, gf: gf(k, f),
     homes: S.homes, points: S.points, homesU8: d.homes, nStates: S.order.length, deadIdx: S.deadIdx, stateColors: S.stateRgb,
     water: S.water, orders: d.orders, orderColor: hex2rgb(sc.color),
