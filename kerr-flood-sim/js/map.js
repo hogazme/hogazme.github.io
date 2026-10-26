@@ -3,8 +3,8 @@
 import { tokenKind, waterAt, bitAt, frameView, cdtMs, speedFactor, speedRatio, trafficClass, pointPersons, argmax,
   pathMidpoint, markerAlpha } from "./data.js";
 
-const MAPBOX_JS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js";
-const MAPBOX_CSS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css";
+const MAPBOX_JS = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.js";
+const MAPBOX_CSS = "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css";
 const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
 const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
 const MAPBOX_STYLES = { outdoors: "mapbox://styles/mapbox/outdoors-v12", satellite: "mapbox://styles/mapbox/satellite-streets-v12" };
