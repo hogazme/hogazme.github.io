@@ -251,8 +251,10 @@ function moveCamera(cam) {
   // the busy roads of the step's run at its peak frame, computed once (the traffic card): their vehicle-weighted box
   if (cam === "traffic" && !S.busy[S.k] && S.data[S.k].roads)
     S.busy[S.k] = busyRoads(S.groups, S.data[S.k].roads, S.manifest.scenarios[S.k].files.roads.shape);
-  const b = cam === "homes" ? S.homeBox : cam === "traffic" ? (S.busy[S.k] || {}).core : S.bounds;
-  map.fitBounds(b || S.bounds, { padding: p, duration, maxZoom: cam === "traffic" ? 14 : 13, essential: true });
+  // traffic: the densest jam (its cluster box, user request 2026-10-26: close enough to see the network), else the core box
+  const busy = S.busy[S.k] || {};
+  const b = cam === "homes" ? S.homeBox : cam === "traffic" ? (busy.cluster ? busy.cluster.box : busy.core) : S.bounds;
+  map.fitBounds(b || S.bounds, { padding: p, duration, maxZoom: cam === "traffic" ? 15 : 13, essential: true });
 }
 
 // ---- time ----

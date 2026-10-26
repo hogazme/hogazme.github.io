@@ -4,9 +4,9 @@ export const STRATEGIES = ["none", "gauge", "plan", "policy", "oracle"];
 export const EXTRAS = ["forced10"];
 const D = (h) => (h >= 20 ? `2025-07-03T${h}:00` : `2025-07-04T${String(h).padStart(2, "0")}:00`);
 const BASE = { study: true, homes: true };
-// Cameras: "study" fits the study area; "homes" the people-weighted 5-95% box of the homes; "traffic" the
-// vehicle-weighted 10-90% box of the busy roads of the step's run at its peak frame, centred on their weighted mean
-// (both computed from the data); an object is a fixed {center, zoom}. Every fit leaves room for the cards (story.js). clock: false hides the clock.
+// Cameras: "study" fits the study area; "homes" the people-weighted 5-95% box of the homes; "traffic" the densest
+// jam of the step's run at its peak frame (the heaviest 1 km neighbourhood of busy roads and everything within 1.5 km
+// of it, up to zoom 15; both computed from the data); an object is a fixed {center, zoom}. Every fit leaves room for the cards (story.js). clock: false hides the clock.
 // A stretch of the Guadalupe near Ingram with many closures by 05:00 (checked in the browser, Task 7).
 const ZOOM_CLOSURES = { center: [-99.24, 30.07], zoom: 13.3 };
 // The Guadalupe between Hunt and Ingram, close enough that the hourly flood images visibly widen (at the homes box the

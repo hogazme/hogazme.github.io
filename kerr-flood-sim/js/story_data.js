@@ -60,7 +60,28 @@ export function busyRoads(groups, roadsU8, shape, minVeh = 1) {
   // core (the camera): the vehicle-weighted 10-90% box of those groups' midpoints, centred on their vehicle-weighted
   // mean. Outlying groups do not stretch it, and the heaviest cluster (here at the end of the corridor) is not left at
   // its edge; a 5-95% box still held a small far cluster and was nearly the full extent.
-  return { f, vehicles, count, bounds: count ? [[w, so], [e, n]] : null, core: centredBox(mids, 0.1, 0.9) };
+  return { f, vehicles, count, bounds: count ? [[w, so], [e, n]] : null, core: centredBox(mids, 0.1, 0.9),
+           cluster: densestCluster(mids) };
+}
+// The densest cluster of weighted points [lon, lat, weight] (the traffic card's camera): the point with the most
+// weight within r1 km (equirectangular distances at the points' mean latitude), then every point within r2 km of it.
+// Returns {box: [[w, s], [e, n]] of those points, share: their share of the total weight}; null if no weight.
+export function densestCluster(pts, r1 = 1, r2 = 1.5) {
+  const tot = pts.reduce((a, p) => a + p[2], 0);
+  if (!(tot > 0)) return null;
+  const lat = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+  const kx = 111.32 * Math.cos(lat * Math.PI / 180), ky = 110.57;
+  const dist = (a, b) => Math.hypot((a[0] - b[0]) * kx, (a[1] - b[1]) * ky);
+  let best = null, bs = -1;
+  for (const p of pts) {
+    let s = 0;
+    for (const q of pts) if (dist(p, q) <= r1) s += q[2];
+    if (s > bs) { bs = s; best = p; }
+  }
+  const sel = pts.filter((q) => dist(best, q) <= r2);
+  const xs = sel.map((q) => q[0]), ys = sel.map((q) => q[1]);
+  return { box: [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]],
+           share: sel.reduce((a, q) => a + q[2], 0) / tot };
 }
 // weightedBox(pts, lo, hi) widened to be symmetric about the weighted mean of the points [x, y, weight].
 export function centredBox(pts, lo, hi) {
