@@ -128,7 +128,7 @@ export const STATE_BANDS = [
   { keys: ["high_ground"], label: "High ground", color: "high_ground" },
   { keys: ["queued_persons", "on_road_persons"], label: "On the road", color: "left_by_car" },
   { keys: ["arrived_persons"], label: "Arrived by car", color: "left_by_car", fill: "url(#hatch-arrived)" },
-  { keys: ["deaths"], label: "Expected life loss", color: "dead" },
+  { keys: ["deaths"], label: "Expected life loss", color: "dead", dec: 1 },
 ];
 // A traffic-only run (forced demand, no behavior or harm model): at home until the vehicles enter the queue, then
 // queued, on the road, arrived; no life loss.
@@ -183,12 +183,14 @@ export function drawStates(svg, totals, f, colors, frames, trafficOnly = false) 
     notes.forEach((t, i) => el("text", { x: 4, y: ny + 15 * i, class: "note" }, lg, t));
     svg._vals.data = vals; svg._xs = xs; svg._box = box;
   }
-  svg._vals.forEach((v, j) => { v.textContent = num(svg._vals.data[j][f]); });
+  svg._vals.forEach((v, j) => { v.textContent = num(svg._vals.data[j][f], bands[j].dec || 0); });
   cursor(svg, svg._box, svg._xs(frames[f]));
 }
 
-// One line per loaded scenario, drawn up to frame f (faint after it), value labelled at the line end.
-export function drawDeaths(svg, loaded, f, manifest, frames) {
+// One line per loaded scenario, drawn up to frame f (faint after it), value labelled at the line end (unless
+// opts.endLabels is false, e.g. when bars next to the chart carry the values).
+export function drawDeaths(svg, loaded, f, manifest, frames, opts = {}) {
+  const ends = opts.endLabels !== false;
   const keys = Object.keys(loaded).filter((k) => manifest.scenarios[k]);
   const n = frames.length;
   const W = svg.clientWidth || 340;
@@ -198,8 +200,8 @@ export function drawDeaths(svg, loaded, f, manifest, frames) {
     if (lx > 4 && lx + w > W - 4) { lx = 4; ly += 16; }
     items.push({ k, x: lx, y: ly }); lx += w;
   }
-  const box = frame(svg, { l: 46, r: 54, t: ly + 12, b: 22 });
-  const sig = `${box.W}x${box.H}|${keys.join(",")}`;
+  const box = frame(svg, { l: 46, r: ends ? 54 : 24, t: ly + 12, b: 22 });   // 24: room for half the last time label
+  const sig = `${box.W}x${box.H}|${keys.join(",")}|${ends}`;
   if (svg._sig !== sig) {
     svg._sig = sig; svg.textContent = "";
     const key = el("g", { class: "lg" }, svg);
@@ -229,7 +231,7 @@ export function drawDeaths(svg, loaded, f, manifest, frames) {
     L.line.setAttribute("points", L.pts.slice(0, f + 1).join(" "));
     L.label.setAttribute("x", svg._xs(frames[f]) + 4);
     L.label.setAttribute("y", y + 4);
-    L.label.textContent = L.v[f].toFixed(2);
+    L.label.textContent = !ends || f === 0 ? "" : L.v[f].toFixed(1);   // none at the first frame: every line is 0 there
   }
   cursor(svg, svg._box, svg._xs(frames[f]));
 }
@@ -271,7 +273,7 @@ export function drawGauge(svg, gauge, ms, frames) {
 
 // info: {title, rows: [[label, value]], table: {head: [], rows: [[]]}, note}
 export function showInspector(elm, info) {
-  if (!info) { elm.innerHTML = "<p>Click a road, zone or home.</p>"; return; }
+  if (!info) { elm.innerHTML = "<p>Click a road or a home.</p>"; return; }
   let h = `<h3>${esc(info.title)}</h3>`;
   if (info.rows && info.rows.length) h += `<dl>${info.rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
   if (info.table) {
@@ -282,9 +284,9 @@ export function showInspector(elm, info) {
   elm.innerHTML = h;
 }
 
-// Ticks under the slider: this scenario's orders (top row), first road closure per zone (middle), real 2025
-// alerts as reference (bottom, outlined). extra: [{ms, title}] closure ticks computed by the caller.
-export function drawTicks(elm, manifest, orders, color, extra = [], alerts = false) {
+// Ticks under the slider: orders (top row; title gives the people reached), road closures (middle), real 2025 alerts
+// as reference (bottom, outlined). orderTicks: orderGroups(...); closureTicks: [{ms, title}].
+export function drawTicks(elm, manifest, orderTicks, color, closureTicks = [], alerts = false) {
   const t0 = cdtMs(manifest.frames.cdt[0]), t1 = cdtMs(manifest.frames.cdt[manifest.frames.cdt.length - 1]);
   const pos = (ms) => `calc(8px + (100% - 16px) * ${((ms - t0) / (t1 - t0)).toFixed(5)})`;
   elm.textContent = "";
@@ -295,20 +297,24 @@ export function drawTicks(elm, manifest, orders, color, extra = [], alerts = fal
     if (bg) s.style.background = bg;
     elm.appendChild(s);
   };
-  const byTime = new Map();
-  for (const o of orders || []) {
-    const t = alerts ? o.t2_cdt : o.t3_cdt;
-    if (!t) continue;
-    const instr = alerts ? "T2" : (o.instr >= 0.5 ? "Leave" : "Higher Ground");
-    const k = `${t}|${instr}`;
-    byTime.set(k, (byTime.get(k) || 0) + 1);
-  }
-  for (const [k, cnt] of byTime) {
-    const [t, instr] = k.split("|");
-    add(cdtMs(t), "t-order", `Order ${alerts ? "" : "T3 "}${instr}: ${cnt} zone${cnt > 1 ? "s" : ""} at ${hhmm(cdtMs(t))}`, color);
-  }
-  for (const e of extra) add(e.ms, "t-close", e.title);
+  for (const g of orderTicks || []) add(g.ms, "t-order", `Order ${g.instr} at ${hhmm(g.ms)}: ${num(g.people)} people`, color);
+  for (const e of closureTicks) add(e.ms, "t-close", e.title);
   const ra = manifest.real_alerts_cdt || {};
   if (ra.ffw) add(cdtMs(ra.ffw), "t-real", `Real 2025 Flash Flood Warning ${hhmm(cdtMs(ra.ffw))} (reference only)`);
   for (const t of ra.ffe || []) add(cdtMs(t), "t-real", `Real 2025 Flash Flood Emergency ${hhmm(cdtMs(t))} (reference only)`);
+}
+
+// Horizontal bars of final values, one per item ({label, color, value, text}), longest scale = largest value.
+export function drawFinals(svg, items) {
+  const W = svg.clientWidth || 340, rowH = 22, labW = 150, H = 8 + rowH * items.length;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.style.height = `${H}px`;
+  svg.textContent = "";
+  const vmax = Math.max(1e-9, ...items.map((d) => d.value));
+  items.forEach((d, i) => {
+    const y = 4 + i * rowH, w = (W - labW - 60) * d.value / vmax;
+    el("text", { x: 0, y: y + 14 }, svg, d.label);
+    el("rect", { x: labW, y: y + 3, width: Math.max(w, 1), height: rowH - 8, fill: d.color }, svg);
+    el("text", { x: labW + w + 6, y: y + 14, class: "v" }, svg, d.text);
+  });
 }

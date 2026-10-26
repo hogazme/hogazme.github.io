@@ -1,0 +1,144 @@
+/* The story page (index.html): one full-width map, fixed under the top bar; the step cards float over its left side
+   (desktop) or scroll over it (phone). Light only. */
+:root { --bg:#f5f5f7; --panel:#ffffff; --glass:rgba(255,255,255,.96); --ink:#1d1d1f; --ink2:#5f5f64; --line:#e3e3e8;
+  --accent:#0071e3; --link:#0066cc; --policy:#eb6834; --plan:#2a78d6; --alerts:#1baf7a; --none:#898781; --scenario:#898781;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+  --bar-h:52px; --gutter:24px; --card-w:clamp(380px, 30vw, 420px); --card-space:calc(var(--card-w) + 2 * var(--gutter));
+  --radius:16px; --shadow:0 0 0 1px rgba(0,0,0,.05), 0 2px 6px rgba(0,0,0,.06), 0 14px 36px rgba(0,0,0,.14);
+  color-scheme: light; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-padding-top: var(--bar-h); }
+body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.5 var(--font); -webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%; text-rendering:optimizeLegibility; }
+a { color:var(--link); text-decoration:none; }
+a:hover { text-decoration:underline; text-underline-offset:2px; }
+
+/* ---- top bar ---- */
+#bar { position:fixed; top:0; left:0; right:0; z-index:20; height:var(--bar-h); display:flex; align-items:center;
+  justify-content:space-between; gap:16px; padding:0 var(--gutter); background:rgba(250,250,252,.86);
+  border-bottom:1px solid rgba(0,0,0,.08); font-size:14px; letter-spacing:-.005em;
+  -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); }
+#bar a { color:var(--ink); min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#bar a.home { font-weight:600; flex:0 1 auto; }
+#bar a:not(.home) { color:var(--link); flex:0 0 auto; }
+
+/* ---- layout: the map fills the window under the bar; the cards float over its left side ---- */
+#story { position:relative; padding-top:var(--bar-h); }
+#stage { position:fixed; top:var(--bar-h); left:0; right:0; bottom:0; z-index:0; overflow:hidden; background:#eceae4; }
+#map { position:absolute; inset:0; }
+/* the column is transparent and lets the map be dragged and clicked between the cards */
+#steps { position:relative; z-index:2; width:var(--card-space); padding:0 var(--gutter); pointer-events:none; }
+.step { min-height:80vh; display:flex; flex-direction:column; justify-content:center; padding:24px 0; min-width:0; }
+#steps .step:first-child { min-height:calc(100vh - var(--bar-h)); }
+#steps .step:last-child { min-height:calc(100vh - var(--bar-h)); }
+
+/* ---- the card ---- */
+.card { position:relative; pointer-events:auto; min-width:0; padding:24px 26px 22px; background:var(--glass);
+  border-radius:var(--radius); box-shadow:var(--shadow); overflow-wrap:anywhere; color:var(--ink);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+  transform:translateY(12px); transition:transform .36s ease-out; }
+/* an inactive card keeps its opaque background and dims only its text (small text stays AA: #6c6c71 is about 5:1 on
+   white); the active card's text fades back in, the card rises, and a thin accent rule marks its left edge */
+.step:not(.active) .card { --ink:#55555a; --ink2:#6c6c71; }
+.card :is(h1, h2, h3, p, li, span, b, output) { transition:color .36s ease-out; }
+.card::before { content:""; position:absolute; left:0; top:20px; bottom:20px; width:3px; border-radius:0 3px 3px 0;
+  background:var(--accent); opacity:0; transition:opacity .36s ease-out; }
+.step.active .card { transform:none; }
+.step.active .card::before { opacity:1; }
+.card > * { margin:0; min-width:0; }
+.card > * + * { margin-top:12px; }
+.card h1 { font-size:34px; line-height:1.1; font-weight:700; letter-spacing:-.026em; }
+.card h2 { font-size:22px; line-height:1.22; font-weight:600; letter-spacing:-.018em; }
+.card h3 { font-size:20px; line-height:1.25; font-weight:600; letter-spacing:-.016em; display:flex; align-items:center; }
+.card h1 + *, .card h2 + *, .card h3 + * { margin-top:10px; }
+.card b { font-weight:600; }
+.card .lede { font-size:19px; line-height:1.45; letter-spacing:-.01em; }
+.card .hint, .card .small, .card .caption { font-size:13px; line-height:1.45; color:var(--ink2); }
+[data-num] { font-variant-numeric:tabular-nums; white-space:nowrap; }
+[data-num].phrase { white-space:normal; }
+
+/* ---- swatches and the traffic legend ---- */
+.sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:9px; background:var(--scenario); flex:none; }
+h3 .sw { width:13px; height:13px; }
+.legend { list-style:none; margin:16px 0 0; padding:14px 0 0; border-top:1px solid var(--line); display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:7px 16px; font-size:13px; line-height:1.35; color:var(--ink2); }
+.legend li { display:flex; align-items:center; gap:9px; min-width:0; }
+.legend li.title { grid-column:1 / -1; color:var(--ink); font-weight:600; }
+.legend .ln { flex:none; width:22px; height:4px; border-radius:2px; }
+.legend .ln.thin { height:2px; }
+.legend .ln.closed { height:5px; }
+
+/* ---- the play / scrub control and its time, in a played step's card ---- */
+.player { display:flex; align-items:center; gap:12px; margin-top:16px; font-size:13px; min-width:0; }
+.player button { flex:none; width:32px; height:32px; border:0; border-radius:50%; background:#ececf0; color:var(--ink);
+  cursor:pointer; font:13px/1 var(--font); display:grid; place-items:center; transition:background .2s ease; }
+.player button:hover { background:#e1e1e6; }
+.player button:focus-visible, .player input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.player input[type=range] { flex:1; min-width:0; margin:0; accent-color:var(--accent); }
+.player output { flex:none; color:var(--ink2); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+/* ---- over the map ---- */
+/* the clock is fixed over the map's top right, left of the zoom buttons (on a phone the cards pass over it, see below) */
+#clock { position:fixed; top:calc(var(--bar-h) + 10px); right:52px; z-index:15; max-width:min(300px, calc(100% - 72px)); padding:7px 13px 8px;
+  background:var(--glass); border-radius:12px; box-shadow:var(--shadow); font-size:13px; line-height:1.3;
+  font-variant-numeric:tabular-nums; overflow-wrap:anywhere; -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+#clock:empty { display:none; }
+#clock b { display:block; font-size:20px; font-weight:600; letter-spacing:-.015em; }
+#clock small { display:flex; align-items:center; font-size:12px; color:var(--ink2); min-width:0; }
+#clock small .sw { margin-right:7px; }
+#mapnote { position:absolute; top:50%; left:calc(var(--card-space) + (100% - var(--card-space)) / 2); transform:translate(-50%, -50%);
+  z-index:6; max-width:min(80%, 360px); background:var(--panel); padding:11px 18px; border-radius:12px; box-shadow:var(--shadow);
+  font-size:14px; line-height:1.45; color:var(--ink); text-align:center; pointer-events:none; overflow-wrap:anywhere; }
+#popup { position:absolute; z-index:7; width:max-content; max-width:min(300px, calc(100% - 16px)); min-width:180px;
+  background:var(--panel); padding:10px 14px 12px; border-radius:12px; box-shadow:var(--shadow); font-size:13px; line-height:1.4;
+  overflow-wrap:anywhere; }
+#popup h3 { font-size:14px; font-weight:600; margin:0 24px 6px 0; }
+#popup dl { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:3px 12px; margin:0; }
+#popup dt { color:var(--ink2); min-width:0; } #popup dd { margin:0; max-width:150px; text-align:right; font-variant-numeric:tabular-nums; }
+#popup .note { color:var(--ink2); font-size:11px; margin:8px 0 0; }
+#popup .x { position:absolute; top:6px; right:6px; width:24px; height:24px; border:0; background:none; color:var(--ink2);
+  font:18px/1 var(--font); cursor:pointer; border-radius:50%; }
+#popup .x:hover { background:#ececf0; color:var(--ink); }
+
+/* ---- the step's chart: a panel at the lower right of the map (desktop), inside the active card (phone) ---- */
+#chart { position:absolute; right:16px; bottom:34px; z-index:4; width:400px; max-height:calc(100% - 110px); overflow:auto; margin:0;
+  background:var(--glass); padding:14px 16px 12px; border-radius:var(--radius); box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+#chart figcaption { font-size:12px; line-height:1.4; font-weight:600; color:var(--ink2); margin-bottom:8px; overflow-wrap:anywhere; }
+#chart svg { width:100%; display:block; overflow:visible; }
+#chartsvg { height:260px; } #chartsvg2 { height:auto; margin-top:10px; }
+#chart svg text { font-family:var(--font); font-size:12px; fill:var(--ink2); font-variant-numeric:tabular-nums; }
+#chart svg .ax line { stroke:var(--line); stroke-width:1; }
+#chart svg .lg text { font-size:12px; fill:var(--ink); } #chart svg .lg text.v { fill:var(--ink2); }
+#chart svg .cursor { stroke:var(--ink); stroke-width:1; stroke-dasharray:3 2; }
+#chart svg text.endlabel { font-size:12px; font-weight:600; }
+#chart svg .model { fill:none; stroke:var(--ink); stroke-width:1.6; } #chart svg .usgs { fill:#5598e7; stroke:#5598e7; }
+#chart svg text.note { font-size:12px; fill:var(--ink2); } #chart svg .lead { stroke:var(--ink2); stroke-width:.6; stroke-dasharray:2 2; }
+#chart svg .band-dead { stroke:var(--ink2); stroke-width:.6; }
+#chart.in-card { position:static; width:auto; max-height:none; overflow:visible; margin:16px 0 0; padding:14px 0 0; background:none;
+  box-shadow:none; border-radius:0; border-top:1px solid var(--line); -webkit-backdrop-filter:none; backdrop-filter:none; }
+
+/* ---- phone: the map fills the screen under the bar; the cards scroll over it with gaps, charts inside the cards ---- */
+@media (max-width: 899px) {
+  :root { --gutter:12px; --card-space:0px; }
+  body { font-size:16px; }
+  #bar { padding:0 16px; font-size:13px; gap:12px; }
+  #steps { width:auto; padding:0 var(--gutter); }
+  .step { min-height:88vh; justify-content:flex-start; padding:0; }
+  /* the title card sits low on the first screen, so the map, its clock and its buttons show above it */
+  #steps .step:first-child { justify-content:flex-end; padding-bottom:36px; }
+  .card { padding:20px 20px 18px; border-radius:14px; }
+  .card h1 { font-size:28px; }
+  .card h2 { font-size:20px; }
+  .card h3 { font-size:18px; }
+  .card .lede { font-size:17px; }
+  /* under the cards (#steps is at z 2): it shows over the map strip and never hides the words of the card being read */
+  #clock { top:calc(var(--bar-h) + 8px); right:50px; padding:5px 10px 6px; z-index:1; } #clock b { font-size:16px; }
+  #mapnote { left:50%; top:40%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition:none !important; animation:none !important; scroll-behavior:auto !important; }
+  .card { transform:none; }
+}

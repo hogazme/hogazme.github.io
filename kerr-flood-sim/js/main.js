@@ -1,8 +1,9 @@
 // Page entry: loads the manifest and data, builds the map(s), controls and charts, and renders frame by frame.
-import { fetchJSON, fetchU8, loadManifest, cdtMs, fmtCdt, waterAt, bitAt, share, tokenKind, pointGroups, pointPersons,
-  majorityState, trafficClass, round2, MIN_VEHICLES, markerAlpha, coordBounds, thinGrid, MARKER_ZOOM } from "./data.js";
-import { createMap, addStaticLayers, setFlood, setZones, deckLayers, roadGroups, groupFrame, geoBounds, hex2rgb,
-  TRAFFIC, SPEED, SPEED_LABELS, CLOSED, CLOSED_W, CLOSED_MARK, MARK_PX, STUDY_LINE, ZONE_LINE, orderMs, instrLabel,
+import { fetchJSON, fetchU8, loadManifest, cdtMs, fmtCdt, waterAt, bitAt, tokenKind, pointGroups, pointPersons,
+  majorityState, trafficClass, round2, MIN_VEHICLES, markerAlpha, coordBounds, thinGrid, MARKER_ZOOM, closedCounts,
+  closureMilestones, orderGroups, pointOrders, orderLabel } from "./data.js";
+import { createMap, addStaticLayers, setFlood, deckLayers, roadGroups, groupFrame, geoBounds, hex2rgb,
+  TRAFFIC, SPEED, SPEED_LABELS, CLOSED, CLOSED_W, CLOSED_MARK, MARK_PX, STUDY_LINE,
   cellSpeed } from "./map.js";
 import { buildScenarioButtons, buildTimeline, drawStates, drawDeaths, drawGauge, showInspector, drawTicks, esc } from "./ui.js";
 
@@ -21,7 +22,7 @@ function notice(key, text) {
 
 // window.dashboard: read-only handle on the page state, for checks in the browser console.
 const S = window.dashboard = { key: null, compare: "", f: 0, data: {}, totals: {}, maps: {}, selection: null,
-  show: { flood: true, river: true, zones: true, study: true, roads: true, closed: true, occupancy: false, roadWater: false,
+  show: { flood: true, river: true, orders: true, study: true, roads: true, closed: true, occupancy: false, roadWater: false,
     homes: true } };
 // Traffic-only runs (forced demand, no behavior or harm model) have no life loss.
 const trafficOnly = (k) => !!(k && S.manifest.scenarios[k] && S.manifest.scenarios[k].traffic_only);
@@ -41,12 +42,12 @@ async function main() {
   S.ui = buildScenarioButtons(manifest, (k) => pickScenario(k));
   notice("load", "Loading data…");
   const sa = manifest.study_area;
-  const [roads, zones, river, homes, flood, gauge, closed, water, studyArea] = await Promise.all([
-    fetchJSON("data/roads.geojson"), fetchJSON("data/zones.geojson"), fetchJSON("data/river.geojson"),
+  const [roads, river, homes, flood, gauge, closed, water, studyArea] = await Promise.all([
+    fetchJSON("data/roads.geojson"), fetchJSON("data/river.geojson"),
     fetchJSON("data/homes.json"), fetchJSON("data/flood/bounds.json"), fetchJSON("data/gauge.json"),
     fetchU8(`data/${manifest.files.closed.file}`), fetchU8(`data/${manifest.files.water_roads.file}`),
     sa ? fetchJSON(`data/${sa.file}`).catch((e) => { notice("study", `Study area: ${e.message}`); return null; }) : null]);
-  Object.assign(S, { roads, zones, river, homes, flood, gauge, closed, studyArea });
+  Object.assign(S, { roads, river, homes, flood, gauge, closed, studyArea });
   S.groups = roadGroups(roads);
   S.points = pointGroups(homes);
   // initial view: the study area (the road network extends up to about 2.5 km beyond it, built with a 3 km buffer, so
@@ -54,10 +55,11 @@ async function main() {
   S.bounds = studyArea ? coordBounds(studyArea.features.map((f) => f.geometry.coordinates)) : geoBounds(roads);
   S.water = { u8: water, nCells: manifest.counts.cells, rowsMs: manifest.water_rows.cdt.map(cdtMs), step: manifest.water_rows.step_m,
     colors: flood.colors, colorStep: flood.depth_step_m };
-  S.zoneName = Object.fromEntries(zones.features.map((z) => [z.properties.zone, z.properties.name]));
-  S.originsByZone = {};
-  homes.zone.forEach((z, o) => (S.originsByZone[z] = S.originsByZone[z] || []).push(o));
-  S.closureTicks = firstClosurePerZone();
+  S.peopleByArea = new Map();
+  homes.area.forEach((z, o) => S.peopleByArea.set(z, (S.peopleByArea.get(z) || 0) + homes.pop[o]));
+  S.groupCells = S.groups.map((g) => g.cells);
+  S.closedCount = closedCounts(S.groupCells, S.closed, manifest.files.closed.shape[1], S.frames.length);
+  S.closureTicks = closureTicks();
 
   // Every scenario's totals (small) are read now for the all-scenario deaths chart; its binary files are only
   // checked (HEAD) here and fetched on first selection. Any failure greys the button out with the reason.
@@ -87,32 +89,14 @@ async function main() {
   if (RECORD) startRecording();
 }
 
-// ---- first road closure per zone (timeline ticks): group midpoint vertex inside the zone polygon ----
-function inRing(x, y, ring) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i], [xj, yj] = ring[j];
-    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
-  }
-  return inside;
-}
-function firstClosurePerZone() {
-  const nF = S.frames.length, rowBytes = S.manifest.files.closed.shape[1];
-  const first = new Map();
-  for (const z of S.zones.features) {
-    const polys = z.geometry.type === "MultiPolygon" ? z.geometry.coordinates : [z.geometry.coordinates];
-    let best = Infinity;
-    for (const gr of S.groups) {
-      const p = gr.path[Math.floor(gr.path.length / 2)];
-      if (!polys.some((pl) => inRing(p[0], p[1], pl[0]))) continue;
-      for (let f = 0; f < Math.min(nF, best); f++) {
-        if (gr.cells.some((c) => bitAt(S.closed, rowBytes, f, c))) { best = f; break; }
-      }
-    }
-    if (best < nF) first.set(z.properties.zone, best);
-  }
-  return Array.from(first, ([zone, f]) => ({ ms: S.frames[f],
-    title: `First road closure in ${S.zoneName[zone]}: ${fmtCdt(S.frames[f])}` }));
+// ---- road closures (timeline ticks): the first closed road and the 25, 50, 75 and 100% milestones of the peak count ----
+function closureTicks() {
+  const n = S.groups.length, c = S.closedCount, out = [];
+  const f0 = c.findIndex((x) => x > 0);
+  if (f0 >= 0) out.push({ ms: S.frames[f0], title: `First road closed: ${fmtCdt(S.frames[f0])}` });
+  for (const m of closureMilestones(c)) out.push({ ms: S.frames[m.f],
+    title: `${Math.round(100 * m.share)}% of the peak closure (${m.n.toLocaleString("en-US")} of ${n.toLocaleString("en-US")} roads): ${fmtCdt(S.frames[m.f])}` });
+  return out;
 }
 
 // ---- controls ----
@@ -141,7 +125,7 @@ function buildControls() {
   const layers = document.createElement("div");
   layers.className = "panel";
   $("layers").appendChild(layers);
-  const items = [["flood", "Flood depth (hourly image)"], ["river", "Rivers"], ["zones", "Zones and orders"],
+  const items = [["flood", "Flood depth (hourly image)"], ["river", "Rivers"], ["orders", "Orders (ring around homes)"],
     ...(S.studyArea ? [["study", "Study area"]] : []), ["roads", "Road traffic"], ["closed", "Closed roads"],
     ["occupancy", "Road occupancy (instead of speed)"], ["roadWater", "Water depth on roads"], ["homes", "Homes"]];
   for (const [k, t] of items) {
@@ -153,7 +137,7 @@ function buildControls() {
   }
   const key = document.createElement("div");
   key.id = "tickkey";
-  key.innerHTML = `<span><i class="t-order"></i>orders</span><span><i class="t-close"></i>first closure per zone</span><span><i class="t-real"></i>real 2025 alerts (reference)</span>`;
+  key.innerHTML = `<span><i class="t-order"></i>orders</span><span><i class="t-close"></i>road closures (first; 25, 50, 75, 100% of peak)</span><span><i class="t-real"></i>real 2025 alerts (reference)</span>`;
   $("ticks").after(key);
   buildLegend();
 }
@@ -195,8 +179,7 @@ function buildLegend() {
     <div class="lg-row"><b>Flood depth</b> (HEC-RAS water surface minus 1 m terrain, hourly; same steps for the "water on roads" layer)
       <div class="bar" style="background:${esc(grad(fl.colors))}"></div><div class="ends"><span>0 m</span><span>${maxDepth.toFixed(0)}+ m</span></div></div>
     ${S.studyArea ? `<div class="lg-row"><i class="sa" style="background:${STUDY_LINE}"></i>Study area (HEC-RAS flood model extent)</div>` : ""}
-    <div class="lg-row"><i class="zl" style="color:${ZONE_LINE}"></i>zone boundary</div>
-    <div class="lg-row"><i class="zf" id="zoneSwatch"></i>zone fill: order issued (label = instruction)</div>
+    <div class="lg-row"><i class="dot" style="background:transparent;border:2px solid ${esc(S.key ? m.scenarios[S.key].color : "#444")}"></i>Ring: an order has reached this home (colour = strategy; instruction in the inspector)</div>
     <div class="lg-row"><b>Homes</b> (one dot per NSI building): colour = most people's state; size = population; black ring = some expected life loss (wider = larger share); thin white outline = none
       <ul class="states">${states}</ul>${forced}</div></details>`;
 }
@@ -214,7 +197,6 @@ function applyVisibility() {
     if (!m) continue;
     const vis = (id, on) => m.map.getLayer(id) && m.map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
     vis("flood", S.show.flood); vis("river", S.show.river);
-    for (const id of ["zones-fill", "zones-line", "zone-labels"]) vis(id, S.show.zones);
     for (const id of ["study-area-halo", "study-area"]) vis(id, S.show.study);
   }
 }
@@ -230,7 +212,7 @@ async function makeMap(container) {
     $("basemap").value = "plain";
     m = await createMap(container, { token: null, style: "plain", bounds: S.bounds });
   }
-  addStaticLayers(m, { zones: S.zones, river: S.river, flood: S.flood, studyArea: S.studyArea });
+  addStaticLayers(m, { river: S.river, flood: S.flood, studyArea: S.studyArea });
   m.map.on("click", (e) => onClick(m, e));
   m.map.on("mousemove", (e) => {
     const hit = m.overlay.pickObject({ x: e.point.x, y: e.point.y, radius: 4, layerIds: PICK_LAYERS });
@@ -303,7 +285,8 @@ function ensureScenario(k) {
     pending[k] = Promise.all([fetchU8(`data/${s.files.roads.file}`), fetchU8(`data/${s.files.homes.file}`)])
       .then(([roads, homes]) => {
         if (!S.totals[k]) throw new Error("totals missing");
-        S.data[k] = { roads, homes, totals: S.totals[k], gf: new Map() };
+        S.data[k] = { roads, homes, totals: S.totals[k], gf: new Map(),
+          orders: pointOrders(S.points, S.homes.area, S.totals[k].orders, k === "alerts") };
         return S.data[k];
       })
       .catch((e) => { S.ui.disable(k, `Unavailable: ${e.message}`); notice(`fail-${k}`, `${s.label}: ${e.message}`); delete pending[k]; return null; });
@@ -317,6 +300,8 @@ function resolveScenario(want) {
   if (S.ui.enabled("policy")) return "policy";
   return keys.find((k) => S.ui.enabled(k));
 }
+const scaledPeople = (k) => { const s = S.manifest.scenarios[k].pop_scale || 1;
+  return new Map(Array.from(S.peopleByArea, ([z, p]) => [z, p * s])); };
 async function pickScenario(k, initial = false) {
   if (!k) return;
   const d = await ensureScenario(k);
@@ -328,7 +313,7 @@ async function pickScenario(k, initial = false) {
   S.ui.setActive(k);
   const color = S.manifest.scenarios[k].color;
   document.documentElement.style.setProperty("--scenario", color);
-  drawTicks($("ticks"), S.manifest, d.totals.orders, color, S.closureTicks, k === "alerts");
+  drawTicks($("ticks"), S.manifest, orderGroups(d.totals.orders, scaledPeople(k), k === "alerts"), color, S.closureTicks, k === "alerts");
   buildLegend();
   schedule();
 }
@@ -372,7 +357,6 @@ function renderMap(m, k, f, ms) {
   if (!m || !S.data[k]) return;
   const d = S.data[k], sc = S.manifest.scenarios[k];
   const fr = setFlood(m, S.flood, ms);
-  setZones(m, d.totals.orders, ms, sc.color, k === "alerts");
   const zoom = m.map.getZoom();
   m.alpha = markerAlpha(zoom);
   // closure markers at least 1.2 marker sizes apart on the screen (no overlaps)
@@ -382,7 +366,7 @@ function renderMap(m, k, f, ms) {
   };
   m.overlay.setProps({ layers: deckLayers({ key: k, f, ms, zoom, thin, groups: S.groups, gf: gfFor(k, f), homes: S.homes,
     points: S.points, homesU8: d.homes, nStates: S.order.length, deadIdx: S.deadIdx, stateColors: S.stateRgb,
-    water: S.water, show: S.show }) });
+    water: S.water, show: S.show, orders: d.orders, orderColor: hex2rgb(sc.color) }) });
   m.label.innerHTML = `<i class="sw" style="background:${esc(sc.color)}"></i>${esc(sc.label)}`;
   return fr;
 }
@@ -392,7 +376,6 @@ function render() {
   const fr = renderMap(S.maps.A, S.key, f, ms);
   if (S.compare) renderMap(S.maps.B, S.compare, f, ms);
   $("clock").innerHTML = `<b>${fmtCdt(ms)}</b><small>Flood image: ${fmtCdt(cdtMs(fr.cdt)).replace(" CDT", "")}</small>`;
-  const sw = $("zoneSwatch"); if (sw) sw.style.background = S.manifest.scenarios[S.key].color;
   const loaded = {};
   // a verification run (population x10) joins the life-loss comparison only while it is shown: its scale would
   // flatten the policy scenarios' lines; a traffic-only run has no life loss and is never in it
@@ -418,10 +401,7 @@ function onClick(m, e) {
   if (hit && hit.layer.id === "homes") S.selection = { kind: "home", o: hit.object, k };
   else if (hit && hit.layer.id === "roads") S.selection = { kind: "road", gi: hit.index, k };
   else if (hit && (hit.layer.id === "closedRoads" || hit.layer.id === "closedMarks")) S.selection = { kind: "road", gi: hit.object, k };
-  else {
-    const z = S.show.zones ? m.map.queryRenderedFeatures(e.point, { layers: ["zones-fill"] }) : [];
-    S.selection = z.length ? { kind: "zone", zone: z[0].properties.zone, k } : null;
-  }
+  else S.selection = null;
   refreshInspector();
 }
 const pct = (x) => `${(100 * x).toFixed(1)}%`;
@@ -466,29 +446,16 @@ function refreshInspector() {
     const segName = (o) => (H.segments && H.segment ? H.segments[H.segment[o]] : "").replace(/_/g, " ");
     const door = !H.door_lon ? [] : H.door_lon[o0] === null ? [["Doorstep road cell", "no road connection in the model (fallback cell)"]]
       : [["Doorstep road cell", `${H.door_lat[o0].toFixed(5)}, ${H.door_lon[o0].toFixed(5)}`]];
+    const od = d.orders[S.points.indexOf(g0)];
+    const orderRow = [["Order", od ? `${orderLabel(od.instr, sel.k === "alerts")} at ${fmtCdt(od.ms)}${od.ms > ms ? " (not yet)" : ""}` : "none in this run"]];
     showInspector(elm, { title: g.rows.length > 1 ? `Home (NSI building, ${g.rows.length} origins)` : "Home (NSI building)",
       rows: [["Scenario", label], ["Time", fmtCdt(ms)],
-        ["Zone", S.zoneName[H.zone[o0]] ?? H.zone[o0]], ["Population", `${g.pop.toFixed(3)} persons`],
+        ["Population", `${g.pop.toFixed(3)} persons`], ...orderRow,
         ["Building", `${g.lat.toFixed(5)}, ${g.lon.toFixed(5)}`], ...door,
         ...stateRows(ppl, (x) => `≈ ${x.toFixed(2)} (${pct(g.pop > 0 ? x / g.pop : 0)})`)],
       table: { head: ["Origin", "Group", "Persons", "Most people"], rows: g.rows.map((o) => [
         `origin ${o}`, segName(o), Hpop[o].toFixed(3), m.states.labels[S.order[majorityState(d.homes, nS, f, o, nO)]]]) },
       note: "Persons by state ≈ share × population summed over the building's origins (shares in 1/255 steps)." + scaleNote });
-  } else {
-    const z = sel.zone, o = d.totals.orders.find((x) => x.zone === z), alerts = sel.k === "alerts";
-    const tiers = [];
-    if (o) {
-      if (o.t1_cdt) tiers.push(["T1", `${fmtCdt(cdtMs(o.t1_cdt))}${cdtMs(o.t1_cdt) < S.frames[0] ? " (before the window)" : ""}`]);
-      if (o.t2_cdt) tiers.push(["T2", fmtCdt(cdtMs(o.t2_cdt))]);
-      const t = alerts ? o.t2_cdt : o.t3_cdt;
-      tiers.push([alerts ? "Order (T2)" : "Order (T3)", t ? `${fmtCdt(orderMs(o, alerts))}: ${instrLabel(o, alerts)}` : "none in this run"]);
-    }
-    const ppl = S.order.map(() => 0);
-    let pop = 0;
-    for (const oi of S.originsByZone[z] || []) { const po = S.homes.pop[oi] * scale; pop += po; S.order.forEach((s, j) => (ppl[j] += share(d.homes, nS, nO, f, oi, j) * po)); }
-    showInspector(elm, { title: S.zoneName[z] ?? `Zone ${z}`, rows: [["Scenario", label], ["Time", fmtCdt(ms)], ...tiers,
-      ["Population", `${pop.toFixed(1)} persons`], ...stateRows(ppl, (x) => `≈ ${x.toFixed(1)}`)],
-      note: "People by state ≈ sum over the zone's homes of share × population (shares in 1/255 steps)." + scaleNote });
   }
 }
 

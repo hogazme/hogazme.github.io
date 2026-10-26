@@ -1,5 +1,5 @@
-// Map layers: Mapbox GL (public token) or MapLibre (plain background) basemap, flood images, river, zones
-// (map style layers) and the deck.gl roads, road water and homes layers drawn through a MapboxOverlay.
+// Map layers: Mapbox GL (public token) or MapLibre (plain background) basemap, flood images, river and the study area
+// (map style layers), and the deck.gl roads, road water and homes layers drawn through a MapboxOverlay.
 import { tokenKind, waterAt, bitAt, frameView, cdtMs, speedFactor, speedRatio, trafficClass, pointPersons, argmax,
   pathMidpoint, markerAlpha } from "./data.js";
 
@@ -8,8 +8,6 @@ const MAPBOX_CSS = "https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css";
 const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
 const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
 const MAPBOX_STYLES = { outdoors: "mapbox://styles/mapbox/outdoors-v12", satellite: "mapbox://styles/mapbox/satellite-streets-v12" };
-// Glyphs for the zone labels on the plain background (MapLibre's public demo font server).
-const PLAIN_GLYPHS = "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf";
 
 export const TRAFFIC = ["#ece7f6", "#c3b2e4", "#9a7fd0", "#6f4eb0", "#45297f"];       // occupancy ramp (layer option)
 // Speed vs free flow (Google-style), by speedClass: >= 0.75, 0.50-0.75, 0.25-0.50, < 0.25.
@@ -24,7 +22,6 @@ export const CLOSED_MARK = "\u{1F6A7}";
 export const MARK_PX = 20;
 export const EMPTY_ROAD = [154, 152, 144, 90];
 export const INK = "#0b0b0b";
-export const ZONE_LINE = "#a0703c";
 // Study area (HEC-RAS 2D flow area): a dark line on a light halo, so it reads on light and satellite basemaps.
 export const STUDY_LINE = "#24211e";
 const NO_DEAD_RING = [255, 255, 255, 220];
@@ -87,7 +84,7 @@ export async function createMap(container, { token, style = "outdoors", bounds }
     await Promise.all([loadScript(MAPLIBRE_JS), loadCss(MAPLIBRE_CSS)]);
     lib = window.maplibregl; kind = "maplibre";
     if (!lib) throw new Error("MapLibre GL did not initialise");
-    mapStyle = { version: 8, glyphs: PLAIN_GLYPHS, sources: {},
+    mapStyle = { version: 8, sources: {},
       layers: [{ id: "background", type: "background", paint: { "background-color": "#f4f3ef" } }] };
   }
   const opts = { container, style: mapStyle, attributionControl: true, dragRotate: false, pitchWithRotate: false };
@@ -98,35 +95,21 @@ export async function createMap(container, { token, style = "outdoors", bounds }
     map.once("load", res);
     map.once("error", (e) => { if (!map.loaded()) rej(new Error(e && e.error ? e.error.message : "map failed to load")); });
   });
-  // Interleaved: deck layers are drawn inside the map's layer stack, below the zone labels (beforeId), so labels stay legible.
+  // Interleaved: deck layers are drawn inside the map's layer stack, below the anchor layer (beforeId).
   const overlay = new deck.MapboxOverlay({ interleaved: true, layers: [] });
   map.addControl(overlay);
   return { map, kind, overlay };
 }
 
-// Zone label points: the mean of each polygon's first ring (closing vertex dropped).
-function zoneCentroid(geom) {
-  const ring = geom.type === "MultiPolygon" ? geom.coordinates[0][0] : geom.coordinates[0];
-  const pts = ring.length > 1 ? ring.slice(0, -1) : ring;
-  const x = pts.reduce((a, p) => a + p[0], 0) / pts.length;
-  const y = pts.reduce((a, p) => a + p[1], 0) / pts.length;
-  return [x, y];
-}
+export const ANCHOR = "overlay-anchor";
 
-export function addStaticLayers(m, { zones, river, flood, studyArea }) {
-  const { map, kind } = m;
+export function addStaticLayers(m, { river, flood, studyArea }) {
+  const { map } = m;
   map.addSource("flood", { type: "image", url: `data/${flood.frames[0].file}`, coordinates: flood.corners });
   map.addLayer({ id: "flood", type: "raster", source: "flood", paint: { "raster-opacity": 0.8, "raster-fade-duration": 0 } });
   map.addSource("river", { type: "geojson", data: river });
   map.addLayer({ id: "river", type: "line", source: "river", paint: { "line-color": "#7fa7c9", "line-width": 1 } });
-  map.addSource("zones", { type: "geojson", data: zones });
-  map.addLayer({ id: "zones-fill", type: "fill", source: "zones", paint: {
-    "fill-color": ["coalesce", ["feature-state", "color"], "#898781"],
-    "fill-opacity": ["case", ["boolean", ["feature-state", "ordered"], false], 0.22, 0] } });
-  // Zone boundaries: dotted, warm brown, so they cannot be read as roads or the study-area outline (solid).
-  map.addLayer({ id: "zones-line", type: "line", source: "zones", layout: { "line-cap": "round" },
-    paint: { "line-color": ZONE_LINE, "line-width": 2, "line-dasharray": [0.1, 2.2] } });
-  // Study area outline, no fill; below the deck layers (roads, homes), which are drawn before "zone-labels".
+  // Study area outline, no fill; below the deck layers (roads, homes), which are drawn just below the anchor layer.
   if (studyArea) {
     map.addSource("study-area", { type: "geojson", data: studyArea });
     map.addLayer({ id: "study-area-halo", type: "line", source: "study-area", layout: { "line-join": "round" },
@@ -134,14 +117,9 @@ export function addStaticLayers(m, { zones, river, flood, studyArea }) {
     map.addLayer({ id: "study-area", type: "line", source: "study-area", layout: { "line-join": "round" },
       paint: { "line-color": STUDY_LINE, "line-width": 3.5 } });
   }
-  const labels = { type: "FeatureCollection", features: zones.features.map((f) => ({ type: "Feature", id: f.id,
-    properties: { zone: f.properties.zone, text: "", color: INK }, geometry: { type: "Point", coordinates: zoneCentroid(f.geometry) } })) };
-  map.addSource("zone-labels", { type: "geojson", data: labels });
-  map.addLayer({ id: "zone-labels", type: "symbol", source: "zone-labels", layout: {
-    "text-field": ["get", "text"], "text-size": 13, "text-allow-overlap": true,
-    "text-font": kind === "mapbox" ? ["DIN Pro Bold", "Arial Unicode MS Bold"] : ["Open Sans Semibold"] },
-    paint: { "text-color": INK, "text-halo-color": "#ffffff", "text-halo-width": 1.6 } });
-  m.flood = flood; m.zoneLabels = labels; m.floodFile = flood.frames[0].file; m.zoneKey = null;
+  map.addSource(ANCHOR, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+  map.addLayer({ id: ANCHOR, type: "circle", source: ANCHOR });   // empty: deck layers are drawn just below it
+  m.flood = flood; m.floodFile = flood.frames[0].file;
 }
 
 // The hourly flood image nearest ms (no interpolation). Returns that image's frame entry.
@@ -157,30 +135,6 @@ export function setFlood(m, flood, ms) {
     m.floodFile = fr.file;
   }
   return fr;
-}
-
-// Order time used for the zone fill: T3 (T2 for the alerts run, alerts = true).
-export function orderMs(o, alerts = false) {
-  const t = alerts ? o.t2_cdt : o.t3_cdt;
-  return t ? cdtMs(t) : null;
-}
-export function instrLabel(o, alerts = false) {
-  if (alerts) return "T2";
-  return o.instr >= 0.5 ? "Leave" : "Higher Ground";
-}
-export function setZones(m, orders, ms, color, alerts = false) {
-  const { map } = m;
-  const on = orders.map((o) => { const t = orderMs(o, alerts); return t !== null && t <= ms; });
-  const key = `${color}|${alerts}|${on.join("")}`;
-  if (key === m.zoneKey) return;
-  m.zoneKey = key;
-  orders.forEach((o, i) => map.setFeatureState({ source: "zones", id: o.zone }, { ordered: on[i], color }));
-  for (const f of m.zoneLabels.features) {
-    const i = orders.findIndex((o) => o.zone === f.properties.zone);
-    f.properties.text = i >= 0 && on[i] ? instrLabel(orders[i], alerts) : "";
-    f.properties.color = color;
-  }
-  map.getSource("zone-labels").setData(m.zoneLabels);
 }
 
 // One path per road group (twin cells of a two-way road share a line): the first feature's geometry, every cell, and
@@ -244,33 +198,34 @@ const CLOSED_RGB = hex2rgb(CLOSED);
 const SPEED_RGB = SPEED.map(hex2rgb);
 // state: {key, f, ms, zoom, groups, gf: groupFrame(...), homes, points: pointGroups(homes), homesU8, nStates, deadIdx,
 //         stateColors (rgb by index), water: {u8, nCells, rowsMs, colors, step} | null,
-//         show: {roads, closed, occupancy, roadWater, homes}}
+//         show: {roads, closed, occupancy, roadWater, homes}, emptyRoad: rgba of no-traffic roads (default EMPTY_ROAD)}
 export function deckLayers(state) {
   const { key, f, ms, zoom = 0, groups, gf, homes, points, homesU8, nStates, deadIdx, stateColors, show = {} } = state;
   const occMode = !!show.occupancy;
   const cls = (i) => trafficClass(gf.veh[i], gf.ratio[i]);
+  const empty = state.emptyRoad || EMPTY_ROAD;                  // roads with no or negligible traffic (rgba)
   const layers = [];
   // Closed groups are drawn by the closed-roads layer; underneath, the traffic layer shows them as thin grey.
   layers.push(new deck.PathLayer({
-    id: "roads", data: groups, visible: show.roads !== false, pickable: true, beforeId: "zone-labels",
+    id: "roads", data: groups, visible: show.roads !== false, pickable: true, beforeId: ANCHOR,
     getPath: (d) => d.path, widthUnits: "pixels", capRounded: true, jointRounded: true,
-    getColor: (d, { index }) => gf.shut[index] ? EMPTY_ROAD
-      : occMode ? (gf.occ[index] === 0 ? EMPTY_ROAD : [...ramp(TRAFFIC, gf.occ[index] / 255), 255])
-      : (cls(index) < 0 ? EMPTY_ROAD : [...SPEED_RGB[cls(index)], 255]),
+    getColor: (d, { index }) => gf.shut[index] ? empty
+      : occMode ? (gf.occ[index] === 0 ? empty : [...ramp(TRAFFIC, gf.occ[index] / 255), 255])
+      : (cls(index) < 0 ? empty : [...SPEED_RGB[cls(index)], 255]),
     getWidth: (d, { index }) => gf.shut[index] ? 1
       : occMode ? (gf.occ[index] === 0 ? 1 : 1.5 + 2.5 * gf.occ[index] / 255) : (cls(index) < 0 ? 1 : TRAFFIC_W),
-    updateTriggers: { getColor: [key, f, occMode], getWidth: [key, f, occMode] },
+    updateTriggers: { getColor: [key, f, occMode, empty.join(",")], getWidth: [key, f, occMode] },
   }));
   const showClosed = show.closed !== false;
   layers.push(new deck.PathLayer({
-    id: "closedRoads", data: gf.closed, visible: showClosed, pickable: true, beforeId: "zone-labels",
+    id: "closedRoads", data: gf.closed, visible: showClosed, pickable: true, beforeId: ANCHOR,
     getPath: (i) => groups[i].path, widthUnits: "pixels", capRounded: true, jointRounded: true,
     getColor: [...CLOSED_RGB, 255], getWidth: CLOSED_W,
   }));
   if (state.water && show.roadWater) {
     const w = state.water;
     layers.push(new deck.PathLayer({
-      id: "roadWater", data: groups, pickable: false, widthUnits: "pixels", beforeId: "zone-labels",
+      id: "roadWater", data: groups, pickable: false, widthUnits: "pixels", beforeId: ANCHOR,
       getPath: (d) => d.path,
       getColor: (d) => {
         const depth = waterAt(w.u8, w.nCells, w.rowsMs, ms, d.cells[0], w.step);
@@ -288,10 +243,20 @@ export function deckLayers(state) {
   const atlas = closureIcon();
   const marks = !showClosed || alpha <= 0 ? [] : (state.thin ? state.thin(gf.closed) : gf.closed);
   layers.push(new deck.IconLayer({
-    id: "closedMarks", data: marks, visible: marks.length > 0, pickable: true, beforeId: "zone-labels",
+    id: "closedMarks", data: marks, visible: marks.length > 0, pickable: true, beforeId: ANCHOR,
     opacity: alpha, iconAtlas: atlas.url, iconMapping: atlas.mapping, getIcon: () => "mark",
     getPosition: (i) => groups[i].mid, sizeUnits: "pixels", getSize: MARK_PX, billboard: true,
   }));
+  if (show.orders && state.orders && points) {
+    const ring = state.orderColor || [0, 0, 0];
+    const due = points.filter((g, i) => state.orders[i] && state.orders[i].ms <= ms);
+    layers.push(new deck.ScatterplotLayer({
+      id: "orders", data: due, pickable: false, beforeId: ANCHOR, filled: false, stroked: true,
+      getPosition: (g) => [g.lon, g.lat], radiusUnits: "pixels", getRadius: (g) => 2 + Math.sqrt(g.pop) + 3,
+      lineWidthUnits: "pixels", getLineWidth: 2, getLineColor: [...ring, 230],
+      updateTriggers: { getLineColor: ring.join(",") },
+    }));
+  }
   if (homesU8) {
     // One dot per NSI structure point (rows of one structure, e.g. resident and mobility-limited, share it):
     // size = summed population, colour = population-weighted majority state, ring = share dead at the point.
@@ -299,7 +264,7 @@ export function deckLayers(state) {
     const per = new Map();
     const at = (g) => { if (!per.has(g.pt)) per.set(g.pt, pointPersons(homesU8, nStates, nO, f, g.rows, homes.pop)); return per.get(g.pt); };
     layers.push(new deck.ScatterplotLayer({
-      id: "homes", data: points, visible: show.homes !== false, pickable: true, beforeId: "zone-labels",
+      id: "homes", data: points, visible: show.homes !== false, pickable: true, beforeId: ANCHOR,
       getPosition: (g) => [g.lon, g.lat],
       radiusUnits: "pixels", getRadius: (g) => 2 + Math.sqrt(g.pop),
       getFillColor: (g) => stateColors[argmax(at(g))],

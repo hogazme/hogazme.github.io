@@ -2,41 +2,105 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kerr County Flood Simulation</title>
-<link rel="stylesheet" href="style.css">
+<title>July 4, 2025: when to warn</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="story.css">
 <!-- Mapbox basemap: reuse the site's public token (houston-exposure/js/config.js defines MAPBOX_TOKEN) -->
 <script src="../houston-exposure/js/config.js"></script>
 <script>window.DASHBOARD_CONFIG = (typeof MAPBOX_TOKEN !== "undefined") ? { mapboxToken: MAPBOX_TOKEN } : {};</script>
 <script src="https://unpkg.com/deck.gl@9.0.0/dist.min.js"></script>
 </head>
 <body>
-<header id="top">
-  <h1>July 4, 2025 flood: how the evacuation model sees it</h1>
-  <div id="scenarios" role="group" aria-label="Scenario"></div>
-  <label>Compare <select id="compare"><option value="">off</option></select></label>
-  <label>Basemap <select id="basemap"></select></label>
-  <a class="tr-link" href="traffic.html">Traffic model check →</a>
-  <span id="notice" hidden></span>
-</header>
-<main>
-  <section id="maps"><div id="mapA" class="map"></div><div id="mapB" class="map" hidden></div>
-    <div id="clock" aria-live="off"></div><div id="legend"></div></section>
-  <aside id="side">
-    <figure><figcaption>People by state</figcaption><svg id="states"></svg></figure>
-    <figure><figcaption>Expected life loss so far</figcaption><svg id="deaths"></svg></figure>
-    <figure><figcaption>Hunt gauge: rise, each series from its own first value</figcaption><svg id="gauge"></svg></figure>
-    <div id="inspector"><p>Click a road, zone or home.</p></div>
-  </aside>
+<header id="bar"><a class="home" href="#title">July 4, 2025: when to warn</a><a href="explore.html">Explore the full dashboard →</a></header>
+<main id="story">
+  <div id="stage">
+    <div id="map"></div>
+    <div id="mapnote" role="status" hidden></div>
+    <div id="popup" hidden></div>
+    <figure id="chart" hidden><figcaption></figcaption><svg id="chartsvg"></svg><svg id="chartsvg2"></svg></figure>
+  </div>
+  <div id="clock" aria-live="off"></div>
+  <div id="steps">
+    <section class="step" id="title" data-step="title"><div class="card">
+      <h1>July 4, 2025: when to warn</h1>
+      <p class="lede">How a flood-evacuation simulator plays out the Guadalupe River flood in Kerr County, Texas, and what better-timed warning orders change in it.</p>
+      <p class="caption" id="caption">Model output: expected values under assumed behavior and harm (D11). Not a reconstruction of July 4, 2025.</p>
+      <p class="hint">Scroll to begin.</p>
+    </div></section>
+    <section class="step" data-step="question"><div class="card">
+      <h2>The question</h2>
+      <p>When should people along the river be told to leave, or to move to higher ground? An order that comes too early costs people time and trust; one that comes too late costs lives.</p>
+      <p>The model follows <span data-num="people">–</span> people in the homes that its flood library reaches: <span data-num="library_floods">–</span> simulated floods, of which July 2025 is one. Each dot on the map is one building.</p>
+    </div></section>
+    <section class="step" data-step="water"><div class="card">
+      <h2>The water</h2>
+      <p>The flood is the HEC-RAS hydraulic model of this event, drawn hour by hour; darker blue is deeper water.</p>
+      <p>The chart compares the model's rise at the Hunt gauge with the USGS record, which ends at <span data-num="usgs_end">–</span>.</p>
+    </div></section>
+    <section class="step" data-step="roads"><div class="card">
+      <h2>Roads close</h2>
+      <p>In the model a road closes once the water on it reaches <span data-num="closure_m">–</span> m. The first road closes at <span data-num="first_closure">–</span>; at the peak, <span data-num="peak_closed_time">–</span>, <span data-num="peak_closed_pct">–</span> of the roads are closed. Water closes roads across the whole area, not only along the river: in the model, small creeks and low spots flood too, often with water too shallow to see at this zoom.</p>
+      <p>Traffic itself stays light: under any of the strategies below, at most <span data-num="max_vehicles">–</span> vehicles are on the road network at once.</p>
+    </div></section>
+    <section class="step" data-step="roads-zoom"><div class="card">
+      <p>Up close, near Ingram: closed roads in red, each marked 🚧.</p>
+    </div></section>
+    <section class="step" data-step="traffic"><div class="card">
+      <h2>Traffic on every road</h2>
+      <p>The model also tracks traffic on each road segment. To show it under heavy load, this run sends every household out by car, with <span data-num="forced_factor">–</span> times as many people as the homes hold: <span data-num="forced_vehicles">–</span> vehicles in all, leaving in the <span data-num="forced_depart_min">–</span> minutes after <span data-num="forced_depart_time">–</span>, onto the July 2025 roads. Each segment is coloured by its speed against free flow, as on a traffic map. At <span data-num="forced_peak_time">–</span>, <span data-num="forced_peak">–</span> vehicles are on the roads at once. This is a test of the traffic model, not a warning strategy: nobody decides, and no expected life loss is computed.</p>
+      <ul class="legend" id="traffic-legend" aria-label="Road colours"></ul>
+    </div></section>
+    <section class="step" data-step="people"><div class="card">
+      <h2>People</h2>
+      <p>A household may act when a warning reaches it, or when water comes close to its home. It prepares, then drives out, walks to nearby high ground, or shelters in its building.</p>
+      <p>How quickly people respond and what they do are assumptions of the model, not observations. This run has no warning orders at all; it is the baseline for the strategies below. Every strategy run, including the one with no warning, includes the real Flood Watch issued on <span data-num="flood_watch_day">–</span> at <span data-num="flood_watch_time">–</span>, which shortens people's preparation in the model.</p>
+    </div></section>
+    <section class="step" data-step="harm"><div class="card">
+      <h2>Harm</h2>
+      <p>The model turns water into an expected loss of life: at home, depending on how high the water rises above the floor; on the road, when a car meets deep water; and on foot.</p>
+      <p>With no warning, the expected life loss is <span data-num="loss_none">–</span>: <span data-num="loss_none_home">–</span> at home, <span data-num="loss_none_road">–</span> on the road and <span data-num="loss_none_foot">–</span> on foot. These are expected values under assumed harm, not counts of people.</p>
+    </div></section>
+    <section class="step" data-step="budget"><div class="card">
+      <h2>Four strategies, one budget</h2>
+      <p>Every order has a cost. The model counts it as a burden: each person who acts on an order adds to it, in full if they choose to drive out and <span data-num="c_shelter">–</span> times as much if they choose higher ground instead (upstairs or on foot).</p>
+      <p>Each strategy below must keep its burden within the same budget: <span data-num="budget_pct">–</span> of the burden of ordering everyone out at the first chance, averaged over the floods used for training (the library without July 2025).</p>
+    </div></section>
+    <section class="step strat" data-step="s-plan"><div class="card">
+      <h3><i class="sw" data-color="plan"></i>Best fixed plan</h3>
+      <p>One order for everyone: "<span data-num="plan_instr">–</span>" at <span data-num="plan_time">–</span>, the best single clock time within the budget on the training floods. A ring appears around a home when its order goes out. In this flood its expected life loss is <span data-num="loss_plan">–</span>.</p>
+    </div></section>
+    <section class="step strat" data-step="s-gauge"><div class="card">
+      <h3><i class="sw" data-color="gauge"></i>Gauge rule</h3>
+      <p>Order everyone to "<span data-num="gauge_instr">–</span>" once the river in the model has risen <span data-num="gauge_rise_m">–</span> m at one of the river gauges near Hunt, checked every hour. In this flood that happens at <span data-num="gauge_time">–</span>. This is the least harmful of the <span data-num="gauge_rules_n">–</span> gauge rules tried; <span data-num="gauge_all_worse">–</span>. In July 2025 it does slightly better than no warning (see the result). In this flood its expected life loss is <span data-num="loss_gauge">–</span>.</p>
+    </div></section>
+    <section class="step strat" data-step="s-policy"><div class="card">
+      <h3><i class="sw" data-color="policy"></i>Learned policy</h3>
+      <p>A rule learned on <span data-num="train_floods">–</span> other simulated floods: it times its orders separately for different parts of the valley, from the river forecast. July 2025 was never used in training. It does not order everyone: in this flood, <span data-num="policy_no_order_people">–</span> people in <span data-num="policy_no_order_homes">–</span> homes get no order. In this flood its expected life loss is <span data-num="loss_policy">–</span>.</p>
+    </div></section>
+    <section class="step strat" data-step="s-oracle"><div class="card">
+      <h3><i class="sw" data-color="oracle"></i>Oracle</h3>
+      <p>The best schedule the search found knowing exactly how this flood unfolds. No real warning could do this. It gives a sense of how much room there is, but the search may not find the true best. In this flood its expected life loss is <span data-num="loss_oracle">–</span>.</p>
+    </div></section>
+    <section class="step" data-step="result"><div class="card">
+      <h2>The result</h2>
+      <p>Within the same budget, the learned policy brings the expected life loss to <b><span data-num="loss_policy">–</span></b>, against <span data-num="loss_plan">–</span> for the best fixed plan, <span data-num="loss_gauge">–</span> for the gauge rule and <span data-num="loss_none">–</span> with no warning.</p>
+      <p>That is <span data-num="oracle_share_pct">–</span> of the reduction the oracle reaches (<span data-num="loss_oracle">–</span>); because the oracle is a search result, this share may be overstated. Across all <span data-num="folds_total">–</span> floods, each held out in turn and averaged over shifted flood timings, <span data-num="folds_variant">–</span> does better than the best fixed plan in <span data-num="folds_wins">–</span> of the <span data-num="folds_total">–</span>.</p>
+    </div></section>
+    <section class="step" data-step="not"><div class="card">
+      <h2>What this is not</h2>
+      <p>One flood, one model of Kerr County. Behavior and harm are assumptions; the numbers are expected values under them, not a forecast of what happened or would have happened.</p>
+      <p><span data-num="caveat">–</span></p>
+    </div></section>
+    <section class="step" data-step="explore"><div class="card">
+      <h2>Explore</h2>
+      <p><a href="explore.html">The full dashboard</a>: every strategy frame by frame, two side by side, with traffic, water on roads and an inspector for every road and home.</p>
+      <p><a href="traffic.html">The traffic model check</a>: how the simulator moves cars, origin by origin.</p>
+      <p class="small">Hossein Gazmeh, Rice University. Paper in preparation.</p>
+    </div></section>
+  </div>
 </main>
-<footer>
-  <button id="play" aria-label="Play">▶</button>
-  <input id="slider" type="range" min="0" value="0" step="1" aria-label="Time">
-  <span id="time"></span>
-  <label>Speed <select id="speed"><option>1</option><option>2</option><option>4</option></select>×</label>
-  <details id="layers"><summary>Layers</summary></details>
-  <div id="ticks"></div>
-  <p id="caption"></p>
-</footer>
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/story.js"></script>
 </body>
 </html>

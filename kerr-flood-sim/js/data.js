@@ -22,7 +22,7 @@ export function cdtMs(iso) {
   const [d, t] = iso.split("T");
   const [y, mo, da] = d.split("-").map(Number);
   const [h, mi] = t.split(":").map(Number);
-  return Date.UTC(y, mo - 1, da, h, mi);          // wall-clock CDT carried as UTC fields; never the browser's zone
+  return Date.UTC(y, mo - 1, da, h, mi);          // wall-clock CDT carried as UTC fields; never the browser's local time
 }
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 export function fmtCdt(ms) {
@@ -158,4 +158,50 @@ export function thinGrid(xy, r) {
     keep.push(i);
   });
   return keep;
+}
+
+// Each drawn home's order: the earliest T3 (T2 for the alerts run) over its rows' areas; null when none is issued.
+export function pointOrders(points, homeArea, orders, alerts = false) {
+  const byArea = new Map(orders.map((o) => [o.area, o]));
+  return points.map((g) => {
+    let best = null;
+    for (const r of g.rows) {
+      const o = byArea.get(homeArea[r]);
+      const t = o && (alerts ? o.t2_cdt : o.t3_cdt);
+      if (!t) continue;
+      const ms = cdtMs(t);
+      if (!best || ms < best.ms) best = { ms, instr: o.instr };
+    }
+    return best;
+  });
+}
+// Number of drawn roads (groups of cells) closed in each frame: a road is closed when any of its cells is.
+export function closedCounts(groupCells, closed, rowBytes, nF) {
+  const out = new Array(nF).fill(0);
+  for (let f = 0; f < nF; f++) for (const cells of groupCells) if (cells.some((c) => bitAt(closed, rowBytes, f, c))) out[f]++;
+  return out;
+}
+// The first frame at which the closed-road count reaches each share of its peak.
+export function closureMilestones(counts, shares = [0.25, 0.5, 0.75, 1]) {
+  const peak = Math.max(0, ...counts);
+  if (!(peak > 0)) return [];
+  return shares.map((s) => { const f = counts.findIndex((c) => c >= s * peak); return { f, n: counts[f], share: s }; });
+}
+// The order's label: "T2" for the real-alerts run, else Leave (instruction >= 0.5) or Higher Ground.
+export function orderLabel(instr, alerts = false) {
+  return alerts ? "T2" : (instr >= 0.5 ? "Leave" : "Higher Ground");
+}
+
+// Orders grouped by time and instruction with the people they reach (peopleByArea: Map area -> persons).
+export function orderGroups(orders, peopleByArea, alerts = false) {
+  const by = new Map();
+  for (const o of orders || []) {
+    const t = alerts ? o.t2_cdt : o.t3_cdt;
+    if (!t) continue;
+    const instr = orderLabel(o.instr, alerts);
+    const k = `${t}|${instr}`;
+    if (!by.has(k)) by.set(k, { ms: cdtMs(t), instr, people: 0 });
+    by.get(k).people += peopleByArea.get(o.area) || 0;
+  }
+  return Array.from(by.values()).sort((a, b) => a.ms - b.ms || a.instr.localeCompare(b.instr));
 }

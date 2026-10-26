@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kerr County Flood Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<!-- Mapbox basemap: reuse the site's public token (houston-exposure/js/config.js defines MAPBOX_TOKEN) -->
+<script src="../houston-exposure/js/config.js"></script>
+<script>window.DASHBOARD_CONFIG = (typeof MAPBOX_TOKEN !== "undefined") ? { mapboxToken: MAPBOX_TOKEN } : {};</script>
+<script src="https://unpkg.com/deck.gl@9.0.0/dist.min.js"></script>
+</head>
+<body>
+<header id="top">
+  <h1>July 4, 2025 flood: how the evacuation model sees it</h1>
+  <div id="scenarios" role="group" aria-label="Scenario"></div>
+  <label>Compare <select id="compare"><option value="">off</option></select></label>
+  <label>Basemap <select id="basemap"></select></label>
+  <a class="tr-link" href="traffic.html">Traffic model check →</a>
+  <a class="tr-link" href="index.html">← Story</a>
+  <span id="notice" hidden></span>
+</header>
+<main>
+  <section id="maps"><div id="mapA" class="map"></div><div id="mapB" class="map" hidden></div>
+    <div id="clock" aria-live="off"></div><div id="legend"></div></section>
+  <aside id="side">
+    <figure><figcaption>People by state</figcaption><svg id="states"></svg></figure>
+    <figure><figcaption>Expected life loss so far</figcaption><svg id="deaths"></svg><p class="note" style="color:var(--ink2);font-size:11px;margin:2px 0 0">Lines: the dashboard's CPU re-run, within 0.02 of the reported (SP3) values.</p></figure>
+    <figure><figcaption>Hunt gauge: rise, each series from its own first value</figcaption><svg id="gauge"></svg></figure>
+    <div id="inspector"><p>Click a road or a home.</p></div>
+  </aside>
+</main>
+<footer>
+  <button id="play" aria-label="Play">▶</button>
+  <input id="slider" type="range" min="0" value="0" step="1" aria-label="Time">
+  <span id="time"></span>
+  <label>Speed <select id="speed"><option>1</option><option>2</option><option>4</option></select>×</label>
+  <details id="layers"><summary>Layers</summary></details>
+  <div id="ticks"></div>
+  <p id="caption"></p>
+</footer>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
