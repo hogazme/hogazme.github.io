@@ -54,7 +54,9 @@ a:hover { text-decoration:underline; text-underline-offset:2px; }
 .card h1 + *, .card h2 + *, .card h3 + * { margin-top:10px; }
 .card b { font-weight:600; }
 .card .lede { font-size:19px; line-height:1.45; letter-spacing:-.01em; }
-.card .hint, .card .small, .card .caption { font-size:13px; line-height:1.45; color:var(--ink2); }
+.card .small, .card .caption { font-size:13px; line-height:1.45; color:var(--ink2); }
+/* "Scroll to begin." on the title card: bold, red and larger (user request 2026-10-27) */
+.card .hint { font-size:18px; line-height:1.4; font-weight:700; color:#c62828; }
 [data-num] { font-variant-numeric:tabular-nums; white-space:nowrap; }
 [data-num].phrase { white-space:normal; }
 
