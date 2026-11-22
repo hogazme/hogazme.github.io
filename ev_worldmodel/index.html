@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Activity-Space World Model</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Libre+Franklin:wght@400;500;600;700&family=STIX+Two+Text:ital@1&display=swap">
+<meta name="description" content="A demonstration of a world model of urban mobility and EV charging deployment, running live on synthetic data over Seattle.">
+<style>
+html{-webkit-text-size-adjust:100%}body{margin:0}img{max-width:100%}
+/* Layout: a chart of Seattle spans the page; the stage column floats over its empty eastern edge.
+   Dark-first. City-lights palette on neutral greys: warmer and brighter = more visits = lower energy. Blue for stations and model output, pink for the target group. */
+:root{
+  --bg:#0E0E0F; --surface:#18181A; --ink:#EEEDEA; --muted:#9B9A96; --line:#2D2D30;
+  --water:#090C10; --ev:#4DA3FF; --target:#F06AA3; --ref:#74747A;
+  --r0:#171717; --r1:#231D17; --r2:#32261A; --r3:#49321B; --r4:#66431C; --r5:#8B5C20; --r6:#B67D29; --r7:#DFAA45; --r8:#FBE7A6;
+  --contour:#000000; color-scheme:dark;
+  --display:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --body:"Libre Franklin","Franklin Gothic Medium","Helvetica Neue",Arial,sans-serif;
+  --math:"STIX Two Text","Times New Roman",serif;
+}
+:root[data-theme="light"]{
+  --bg:#F5F4F1; --surface:#FCFBF9; --ink:#161616; --muted:#66655F; --line:#D9D7D0;
+  --water:#D6DEE5; --ev:#1766C2; --target:#B0336B; --ref:#8A8983;
+  --r0:#EDECE7; --r1:#F2E6C6; --r2:#EDD49A; --r3:#E3BC6A; --r4:#D29F45; --r5:#B97E2E; --r6:#955E21; --r7:#6D4119; --r8:#432610;
+  --contour:#2A1808; color-scheme:light }
+
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.5}
+.wrap{max-width:1500px;margin:0 auto;padding-block:26px 56px;
+  padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(30px,3.7vw,50px);line-height:1.05;letter-spacing:-.012em;margin:0;text-wrap:balance}
+.sub{margin:10px 0 0;max-width:74ch;font-size:16px}
+.by{margin:8px 0 0;font-size:13.5px;color:var(--muted)}
+:focus-visible{outline:2px solid var(--ev);outline-offset:2px}
+
+nav.acts{display:flex;gap:6px 34px;flex-wrap:wrap;margin-top:22px}
+.act{display:flex;flex-direction:column;gap:1px}
+.act>span{font-size:12px;color:var(--muted)}
+.act>div{display:flex;gap:2px;border-top:1px solid var(--line)}
+.act button{font:500 14.5px var(--body);color:var(--muted);background:none;border:0;border-top:3px solid transparent;margin-top:-2px;padding:7px 12px 6px 0;cursor:pointer;white-space:nowrap}
+.act button+button{padding-left:12px}
+.act button[aria-selected="true"]{color:var(--ink);border-top-color:var(--ink);font-weight:600}
+.act button:hover{color:var(--ink)}
+
+.stage{position:relative;margin-top:14px;border-radius:5px;overflow:hidden;background:var(--r0)}
+#map{display:block;width:100%;aspect-ratio:100/62;cursor:crosshair;touch-action:manipulation}
+.mapnote{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:110ch}
+.who{font-weight:600;color:var(--ink)}
+
+.panel{padding:18px 4px 4px}
+.stage.float .panel{position:absolute;top:12px;right:12px;bottom:12px;width:356px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding:14px 18px;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:5px}
+.panel section{display:flex;flex-direction:column;gap:9px}
+.panel h2{font-family:var(--display);font-weight:600;font-size:22px;line-height:1.12;letter-spacing:-.005em;margin:0}
+.panel p{margin:0;font-size:13.5px;line-height:1.45}
+.big{display:flex;flex-direction:column;gap:1px}
+.big b{font-family:var(--body);font-weight:700;font-size:38px;line-height:1;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.big b small{font-size:20px;font-weight:500;color:var(--muted);letter-spacing:0}
+.big span{font-size:13px;color:var(--muted)}
+.more summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.more summary:hover{color:var(--ink)}
+.eq{font-family:var(--math);font-style:italic;font-size:15.5px;line-height:1.45;margin-top:8px}
+.more pre{font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;margin:8px 0 0;padding:9px 11px;background:var(--bg);border:1px solid var(--line);border-radius:3px;white-space:pre-wrap;tab-size:2}
+
+.ctls{display:flex;flex-direction:column;gap:7px}
+.ctls details summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+.ctls details[open] summary{margin-bottom:7px}
+.ctls details>div{display:flex;flex-direction:column;gap:7px}
+.ctl{display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--muted);min-width:0}
+.ctl.rowc{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+.ctl output{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.ctl select{font:500 13px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:3px;padding:5px 7px;min-width:0;max-width:100%}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;flex:none}
+.seg button{font:500 12.5px var(--body);color:var(--muted);background:none;border:0;padding:4px 9px;cursor:pointer;white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.btn{font:500 13px var(--body);color:var(--ink);background:none;border:1px solid var(--line);border-radius:3px;padding:5px 11px;cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.btn.pri:hover{opacity:.88}
+.row{display:flex;gap:7px;flex-wrap:wrap}
+.check{flex-direction:row;align-items:center;gap:7px;color:var(--ink);font-size:13px}
+.check input{accent-color:var(--ink)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;margin:0;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line)}
+input[type=range]::-moz-range-track{height:2px;background:var(--line)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--ink);margin-top:-5.5px;border:0}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--ink);border:0}
+dl.read{display:grid;grid-template-columns:1fr auto;gap:3px 12px;margin:0;font-variant-numeric:tabular-nums}
+dl.read dt{color:var(--muted);font-size:13px}
+dl.read dd{margin:0;font-weight:600;font-size:13.5px;text-align:right}
+dl.read dd small{font-weight:400;color:var(--muted);font-size:12px}
+.chart{width:100%;height:100px;display:block}
+.cap{color:var(--muted);font-size:12px;line-height:1.4;margin-top:-6px}
+.key{display:inline-block;width:13px;height:0;border-top:2.5px solid currentColor;vertical-align:middle;margin-right:4px}
+.k-dash{border-top-style:dashed}.k-ev{color:var(--ev)}.k-ref{color:var(--ref)}.k-ink{color:var(--ink)}.k-muted{color:var(--muted)}
+
+.below{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px 64px;margin-top:60px;padding-top:26px;border-top:1px solid var(--line)}
+.below h2{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:-.005em;margin:0 0 10px}
+.below p{margin:0 0 12px;max-width:62ch}
+table.status{border-collapse:collapse;width:100%;font-size:13.5px}
+table.status td{padding:7px 14px 7px 0;border-top:1px solid var(--line);vertical-align:top}
+table.status td:first-child{font-weight:600;white-space:nowrap}
+table.status td:last-child{padding-right:0;white-space:nowrap;text-align:right}
+.st::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ink);margin-right:7px}
+.st.wip{color:var(--muted)}
+.st.wip::before{background:none;box-shadow:inset 0 0 0 1.5px var(--muted)}
+.tw{overflow-x:auto}
+@media (max-width:940px){.below{grid-template-columns:minmax(0,1fr)} table.status td:first-child{white-space:normal}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>A world model of how a city moves</h1>
+    <p class="sub">It learns each neighborhood's latent energy landscape from noisy visit records, predicts how that landscape reorganises when a charging station opens, and plans deployment by imagining the years ahead.</p>
+    <p class="by">Demonstration of the method - Hossein Gazmeh (hgazmeh@rice.edu)</p>
+  </header>
+
+  <nav class="acts" aria-label="Stages of the world model">
+    <div class="act"><span>Learn</span><div role="tablist">
+      <button role="tab" id="tab-state" data-stage="state" aria-selected="true">Latent state</button>
+      <button role="tab" id="tab-observe" data-stage="observe" aria-selected="false">Observation</button>
+      <button role="tab" id="tab-dynamics" data-stage="dynamics" aria-selected="false">Dynamics</button>
+      <button role="tab" id="tab-traits" data-stage="traits" aria-selected="false">Traits</button></div></div>
+    <div class="act"><span>Intervene</span><div role="tablist">
+      <button role="tab" id="tab-intervene" data-stage="intervene" aria-selected="false">Intervention</button>
+      <button role="tab" id="tab-discovery" data-stage="discovery" aria-selected="false">Discovery</button></div></div>
+    <div class="act"><span>Imagine</span><div role="tablist">
+      <button role="tab" id="tab-replay" data-stage="replay" aria-selected="false">Replay</button>
+      <button role="tab" id="tab-rollout" data-stage="rollout" aria-selected="false">Rollout</button>
+      <button role="tab" id="tab-plan" data-stage="plan" aria-selected="false">Planning</button></div></div>
+    <div class="act"><span>Verify</span><div role="tablist">
+      <button role="tab" id="tab-verify" data-stage="verify" aria-selected="false">Validation</button></div></div>
+  </nav>
+
+  <div class="stage" id="stage">
+    <canvas id="map" aria-label="Map of Seattle with synthetic data"></canvas>
+    <div class="panel">
+
+      <section id="p-state">
+        <h2>Every neighborhood has a landscape</h2>
+        <div class="big"><b id="bg-state"></b><span id="bl-state"></span></div>
+        <p>A neighborhood's visits spread over the city's venues as a field, sitting in the low ground of an energy landscape shaped by attraction, travel time, visitor type and habit. The oval summarises it as a habitual core inside a wider range.</p>
+        <details class="more"><summary>Equation and program</summary>
+          <div class="eq">π<sub>k</sub>(v | c) ∝ exp(−U<sub>k</sub>(c, v)) &nbsp;&nbsp; p⁰<sub>c</sub> = Σ<sub>k</sub> w<sub>ck</sub> π<sub>k</sub></div>
+          <pre>def field(c):                       # where neighborhood c's visits go
+    k = sample(Categorical(w[c]))   # visitor type
+    U = -(attract + tilt[k] - beta[k] * travel[c] + habit[c])
+    return softmax(-U)</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>Field of</span>
+            <select id="st-type"><option value="-1">The whole neighborhood</option></select></label>
+          <label class="ctl check"><input type="checkbox" id="st-all"> Show every neighborhood's oval</label>
+        </div>
+        <dl class="read">
+          <dt>Habitual core</dt><dd id="st-core"></dd>
+          <dt>Full range</dt><dd id="st-range"></dd>
+          <dt>Mean distance to a visited venue</dt><dd id="st-dist"></dd>
+        </dl>
+        <canvas class="chart" id="st-chart" style="height:104px"></canvas>
+        <p class="cap">Visitor types in this neighborhood. Click any home on the map to change neighborhood.</p>
+      </section>
+
+      <section id="p-observe" hidden>
+        <h2>The records hide the landscape</h2>
+        <div class="big"><b id="bg-observe"></b><span id="bl-observe"></span></div>
+        <p>The data provider sees a small panel, withholds counts below 2 and reports 2 to 4 as 4. The model treats records as censored draws from the latent field and infers the field behind them.</p>
+        <details class="more"><summary>Equation and program</summary>
+          <div class="eq">Y<sub>cvt</sub> ~ Poisson(n<sub>ct</sub> · p<sub>cv</sub>), seen through the censoring rule</div>
+          <pre>def records(c, t):
+    y = sample(Poisson(n[c, t] * field(c)))
+    return censor(y)        # below 2 withheld; 2 to 4 reported as 4
+posterior(field, given=records)</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>Map shows</span>
+            <select id="ob-view"><option value="records">Records</option><option value="inferred">Inferred</option><option value="truth">True field</option></select></label>
+          <label class="ctl"><span>Months of records used <output id="ob-To"></output></span>
+            <input type="range" id="ob-T" min="1" max="24" step="1" value="6"></label>
+          <div class="row"><button class="btn" id="ob-draw">Draw new records</button></div>
+        </div>
+        <dl class="read">
+          <dt>Visits the records withhold</dt><dd id="ob-hid"></dd>
+          <dt>Change between two months of records (latent field: 0%)</dt><dd id="ob-churn"></dd>
+        </dl>
+        <canvas class="chart" id="ob-chart"></canvas>
+        <p class="cap">Share of visits misplaced, by months of records. <span class="key k-ref"></span>raw shares <span class="key k-ink" style="margin-left:8px"></span>inferred field</p>
+      </section>
+
+      <section id="p-dynamics" hidden>
+        <h2>The landscape moves</h2>
+        <div class="big"><b id="bg-dynamics"></b><span id="bl-dynamics"></span></div>
+        <p>The true landscape drifts and, midway, the main anchor loses most of its visits to another venue. A filter carries the state forward and corrects it with each month of censored records.</p>
+        <details class="more"><summary>Equation and program</summary>
+          <div class="eq">U<sub>t</sub> = U<sub>t−1</sub> + η<sub>t</sub> &nbsp;&nbsp; s<sub>t</sub> = ρ s<sub>t−1</sub> + E[Y<sub>t</sub> | records, s<sub>t−1</sub>]</div>
+          <pre>def step(U_prev):
+    return U_prev + sample(Normal(0, sigma))    # slow drift
+state = filter(step, records)   # predict, then correct, each month</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>Map shows</span>
+            <select id="dy-view"><option value="filter">The filtered state</option><option value="truth">The true landscape</option><option value="static">One fit of all months so far</option><option value="records">This month's records</option></select></label>
+          <label class="ctl"><span>Month <output id="dy-mo"></output></span>
+            <input type="range" id="dy-m" min="0" max="35" step="1" value="23"></label>
+          <div class="row"><button class="btn pri" id="dy-play">Play 36 months</button><button class="btn" id="dy-draw">New history</button></div>
+        </div>
+        <dl class="read">
+          <dt>Visits at the old anchor: true, filtered</dt><dd id="dy-a"></dd>
+          <dt>Visits at the new anchor: true, filtered</dt><dd id="dy-b"></dd>
+        </dl>
+        <canvas class="chart" id="dy-chart"></canvas>
+        <p class="cap">Share of visits misplaced, by month; the shaded months are the anchor shift. <span class="key k-ref"></span>raw records <span class="key k-muted" style="margin-left:8px"></span>one fit <span class="key k-ink" style="margin-left:8px"></span>filtered state</p>
+      </section>
+
+      <section id="p-traits" hidden>
+        <h2>What makes neighborhoods differ</h2>
+        <div class="big"><b id="bg-traits"></b><span id="bl-traits"></span></div>
+        <p>No record states how rigid a neighborhood's routines are, what distance costs it or how far its EV households depend on public charging. Each trait is inferred from behaviour under a shared prior, and each changes the model's predictions.</p>
+        <details class="more"><summary>Equation and program</summary>
+          <div class="eq">θ<sub>c</sub> ~ N(B x<sub>c</sub>, Σ) &nbsp;&nbsp; U<sub>c</sub> = U(θ<sub>c</sub>) &nbsp;&nbsp; λ<sub>c</sub> = λ · g(θ<sub>c</sub>)</div>
+          <pre>trait[c] ~ Normal(B @ demographics[c], Sigma)   # shared prior
+habit[c]  = anchors[c] ** rigidity[c]
+beta[c]   = beta * sensitivity[c]
+lift[c]   = lam * (0.5 + 1.5 * dependence[c])
+posterior(trait, given=records + responses)</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>Trait</span>
+            <select id="tr-sel"><option value="dep">Dependence</option><option value="rig">Rigidity</option><option value="sens">Distance cost</option></select></label>
+        </div>
+        <dl class="read">
+          <dt>Charging dependence</dt><dd id="tr-dep"></dd>
+          <dt>Routine rigidity</dt><dd id="tr-rig"></dd>
+          <dt>Travel-cost sensitivity</dt><dd id="tr-sens"></dd>
+        </dl>
+        <canvas class="chart" id="tr-chart" style="height:124px"></canvas>
+        <p class="cap">Each dot is a neighborhood: recovered (up, ±1 sd) against true (across). The selected one is blue.</p>
+      </section>
+
+      <section id="p-intervene" hidden>
+        <h2>A station opens</h2>
+        <div class="big"><b id="bg-intervene"></b><span id="bl-intervene"></span></div>
+        <p>A station lowers the energy of its host venue for households with an EV. They re-choose from the whole field: the host gains and every other venue gives up a little. Click a venue to open or close a station.</p>
+        <details class="more"><summary>Equation and program</summary>
+          <div class="eq">π<sup>EV</sup> ∝ π · (1 + λ)<sup>[v hosts a station]</sup> &nbsp;&nbsp; p = (1 − q) p⁰ + q p<sup>EV</sup></div>
+          <pre>def respond(c, hosts):
+    ev = field(c) * (1 + lift[c]) ** is_host(hosts)   # EV households only
+    return (1 - q[c]) * field(c) + q[c] * normalise(ev)
+with do(hosts = hosts | {v}):                         # intervention
+    after = respond(c, hosts)</pre></details>
+        <div class="ctls">
+          <label class="ctl"><span>Lift at a host, λ <output id="iv-lamo"></output></span>
+            <input type="range" id="iv-lam" min="0" max="2" step="0.1" value="1"></label>
+          <label class="ctl"><span>Households with an EV, q <output id="iv-qo"></output></span>
+            <input type="range" id="iv-q" min="2" max="40" step="1" value="15"></label>
+          <label class="ctl rowc"><span>Landscape of</span>
+            <select id="iv-view"><option value="ev">EV households</option><option value="all">Everyone</option></select></label>
+          <div class="row"><button class="btn pri" id="iv-play">Replay the opening</button><button class="btn" id="iv-clear">Clear stations</button></div>
+        </div>
+        <dl class="read">
+          <dt>All households' visits at hosts, before and after</dt><dd id="iv-au"></dd>
+          <dt>Largest loss at any other venue</dt><dd id="iv-loss"></dd>
+          <dt>The oval's centre moves</dt><dd id="iv-oval"></dd>
+          <dt>This neighborhood's lift, λ × its dependence</dt><dd id="iv-lc"></dd>
+        </dl>
+        <canvas class="chart" id="iv-chart"></canvas>
+        <p class="cap"><span class="key k-ev"></span>EV households' share of visits at hosts, by months since opening.</p>
+      </section>
+
+      <section id="p-discovery" hidden>
+        <h2>Which law is true?</h2>
+        <div class="big"><b id="bg-discovery"></b><span id="bl-discovery"></span></div>
+        <p>The model holds three rival response laws and updates its belief with every opening it observes. It can also choose where to look: the site whose outcome best separates the rivals.</p>
+        <details class="more"><summary>Equation and program</summary>
+          <div class="eq">P(law | openings) ∝ P(law) ∫ P(visits | law, λ) dλ</div>
+          <pre>laws   = [no_response, opening_year_only, lasting]
+belief = posterior(laws, given=openings_seen)   # lift integrated out
+site   = argmax(v, expected_information(v, belief))
+observe(site); update(belief)</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>True law (hidden)</span>
+            <select id="dc-truth"><option value="lasting">Lasting</option><option value="year">Year one</option><option value="none">None</option></select></label>
+          <label class="ctl rowc"><span>Sites observed</span>
+            <select id="dc-strat"><option value="model">Chosen</option><option value="market">Market's</option></select></label>
+          <div class="row"><button class="btn pri" id="dc-next">Observe next opening</button><button class="btn" id="dc-run">Run 30</button><button class="btn" id="dc-new">Start over</button></div>
+        </div>
+        <dl class="read">
+          <dt>Belief: none, year one, lasting</dt><dd id="dc-ps"></dd>
+          <dt>Lift under the leading law</dt><dd id="dc-lam"></dd>
+          <dt>Openings to 95% belief: chosen, market's</dt><dd id="dc-95"></dd>
+        </dl>
+        <canvas class="chart" id="dc-chart"></canvas>
+        <p class="cap">Belief in the true law by openings observed. <span class="key k-ev"></span>this run <span class="key k-ink" style="margin-left:8px"></span>chosen sites, median of 24 runs <span class="key k-ref" style="margin-left:8px"></span>market's sites, median</p>
+      </section>
+
+      <section id="p-replay" hidden>
+        <h2>Replaying six years</h2>
+        <div class="big"><b id="bg-replay"></b><span id="bl-replay"></span></div>
+        <p>The market's siting law is learned from where stations opened: it follows venues popular with EV households. Replay re-sites the same openings under another rule and compares the outcome with what happened.</p>
+        <details class="more"><summary>Program</summary>
+          <pre>def market(t):                  # siting law learned from openings
+    return sample(Categorical(ev_visits(t) ** a))
+with do(siting = by_activity_space):    # counterfactual history
+    outcome = run(2019, 2024)</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>Target group</span><select id="rp-group" class="g-sel"></select></label>
+          <label class="ctl rowc"><span>Re-site by</span>
+            <select id="rp-rule"><option value="activity">Activity space</option><option value="residence">Residence</option></select></label>
+          <label class="ctl"><span>Month <output id="rp-mo"></output></span>
+            <input type="range" id="rp-m" min="0" max="71" step="1" value="71"></label>
+          <div class="row"><button class="btn pri" id="rp-play">Play 2019 to 2024</button></div>
+        </div>
+        <dl class="read">
+          <dt>EV owners' access: as it happened, re-sited</dt><dd id="rp-e"></dd>
+        </dl>
+        <canvas class="chart" id="rp-chart"></canvas>
+        <p class="cap">Target group's access: the share of its visits at venues with a station. <span class="key k-ref"></span>as it happened <span class="key k-ev" style="margin-left:8px"></span>re-sited</p>
+      </section>
+
+      <section id="p-rollout" hidden>
+        <h2>Imagining 2030</h2>
+        <div class="big"><b id="bg-rollout"></b><span id="bl-rollout"></span></div>
+        <p>The model rolls forward from 2024: adoption spreads, stations are sited, households respond. Each run is one imagined future under stated conditions, not a forecast.</p>
+        <details class="more"><summary>Program</summary>
+          <pre>for t in months(2025, 2030):
+    q      = adoption(t, path)
+    hosts |= siting_rule(t, state)
+    state  = step(state)                # drift
+    use[t] = respond(everyone, hosts)</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>Target group</span><select id="ro-group" class="g-sel"></select></label>
+          <label class="ctl rowc"><span>Siting rule</span>
+            <select id="ro-rule"><option value="market">Market</option><option value="activity">By activity space</option><option value="residence">By residence</option><option value="mix">Balanced</option></select></label>
+          <details><summary>More conditions: pace, adoption, response, drift</summary><div>
+          <label class="ctl rowc"><span>Pace of building</span>
+            <select id="ro-pace"><option value="1">Recent</option><option value="2">Twice as fast</option></select></label>
+          <label class="ctl rowc"><span>EV adoption</span>
+            <select id="ro-path"><option value="0">Slow</option><option value="1" selected>Central</option><option value="2">Fast</option></select></label>
+          <label class="ctl rowc"><span>Response</span>
+            <select id="ro-shape"><option value="step">Lasting</option><option value="year">Year one</option><option value="none">None</option></select></label>
+          <label class="ctl check"><input type="checkbox" id="ro-drift"> Let the landscape drift</label>
+          </div></details>
+          <label class="ctl"><span>Month <output id="ro-mo"></output></span>
+            <input type="range" id="ro-m" min="72" max="143" step="1" value="143"></label>
+          <div class="row"><button class="btn pri" id="ro-play">Play 2025 to 2030</button></div>
+        </div>
+        <dl class="read">
+          <dt>Stations open; EV owners' own use</dt><dd><span id="ro-n"></span>; <span id="ro-ev"></span></dd>
+        </dl>
+        <canvas class="chart" id="ro-chart" style="height:86px"></canvas>
+        <p class="cap">Target group's use. <span class="key k-ev"></span>chosen rule, median and range over runs <span class="key k-ref" style="margin-left:8px"></span>market</p>
+      </section>
+
+      <section id="p-plan" hidden>
+        <h2>The frontier of plans</h2>
+        <div class="big"><b id="bg-plan"></b><span id="bl-plan"></span></div>
+        <p>Every plan trades reach among current EV owners against reach into a target group. Sweeping the planner's objective traces the frontier of what is possible by 2030; plans that ignore activity spaces fall inside it.</p>
+        <details class="more"><summary>Program</summary>
+          <pre>def plan(w):                    # w: weight on the target group
+    return argmax(sites, (1 - w) * access(ev_owners) + w * access(target))
+frontier = [outcome(plan(w)) for w in grid(0, 1)]</pre></details>
+        <div class="ctls">
+          <label class="ctl rowc"><span>Target group</span><select id="pl-group" class="g-sel"></select></label>
+          <label class="ctl rowc"><span>Pace of building</span>
+            <select id="pl-pace"><option value="1">Recent</option><option value="2">Twice as fast</option></select></label>
+          <label class="ctl"><span>Planner's weight on the target group <output id="pl-wo"></output></span>
+            <input type="range" id="pl-w" min="0" max="20" step="1" value="10"></label>
+        </div>
+        <dl class="read">
+          <dt>Target group's access under this plan</dt><dd id="pl-t"></dd>
+          <dt>EV owners' access given up</dt><dd id="pl-cost"></dd>
+        </dl>
+        <canvas class="chart" id="pl-chart" style="height:112px"></canvas>
+        <p class="cap">Across: EV owners' access in 2030. Up: the target group's. Open circle: the plan on the map.</p>
+      </section>
+
+      <section id="p-verify" hidden>
+        <h2>Can it recover the truth?</h2>
+        <div class="big"><b id="bg-verify"></b><span id="bl-verify"></span></div>
+        <p>On synthetic data the truth is known. Two tests carry over to real data: scoring held-out visits against simpler models, and recovering the response from how a host's gain scales with EV share.</p>
+        <canvas class="chart" id="vf-bars" style="height:88px"></canvas>
+        <p class="cap">Held-out visits: gain in log score per visit over a gravity model. The dashed line is the true field.</p>
+        <canvas class="chart" id="vf-dose" style="height:118px"></canvas>
+        <p class="cap">Rise in visits at hosts after opening, by neighborhoods' EV share. Response law at the <span class="key k-ev"></span>fitted lift and the <span class="key k-ref k-dash"></span>true lift.</p>
+        <div class="row"><button class="btn" id="vf-draw">Draw new data</button></div>
+      </section>
+    </div>
+  </div>
+  <p class="mapnote" id="mapnote"></p>
+
+  <div class="below">
+    <div>
+      <h2>What already runs on real data</h2>
+      <p>The demonstration above runs live on synthetic data placed on Seattle's real shoreline. It mirrors a model being built on the Seattle metropolitan area: 716 neighborhoods, about 36,000 venues, six years of monthly visit records and more than 1,300 charging-station openings.</p>
+      <div class="tw"><table class="status">
+        <tr><td>Latent state</td><td>Energy field and twelve visitor types fitted for every neighborhood</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Observation model</td><td>The provider's withholding and coding rule inside the likelihood</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Re-choice dynamics</td><td>Gradient flow on the venue graph, estimated from monthly change</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Station response</td><td>Identified by EV share at hosts against control venues, cross-validated over spatial blocks</td><td><span class="st">Running</span></td></tr>
+        <tr><td>EV adoption</td><td>Counted from vehicle licensing records and projected on three paths to 2030</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Siting law</td><td>Fitted to observed openings</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Replay and rollout</td><td>Counterfactual siting of past openings; 540 conditional runs to 2030</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Baselines</td><td>Held-out visits scored against gravity and logit models</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Rival laws</td><td>Response scenarios scored against each other across spatial blocks</td><td><span class="st">Running</span></td></tr>
+        <tr><td>Latent traits</td><td>Neighborhood traits inferred under a shared prior, charging dependence first</td><td><span class="st wip">In progress</span></td></tr>
+        <tr><td>Latent drift</td><td>State-space dynamics for the landscape itself</td><td><span class="st wip">In progress</span></td></tr>
+        <tr><td>Transfer</td><td>Tests forward in time and in other cities</td><td><span class="st wip">In progress</span></td></tr>
+      </table></div>
+    </div>
+    <div>
+      <h2>Why it matters beyond charging</h2>
+      <p>A charging station is one intervention on one city. The same four parts apply wherever something new is placed among people's routines: a latent state learned from censored mobility records, a response law identified from natural experiments, a learned account of how sites get chosen, and a planner that searches inside the model.</p>
+      <p>Transit stops, clinics, grocery stores and cooling centres all change the landscape a neighborhood moves on. A model that holds the landscape, and not only the access score read off it, can say what a new place would do before it is built, and for whom.</p>
+    </div>
+  </div>
+</div>
+
+<script id="model">
+const WM=(()=>{'use strict';
+const W=100,H=62,KM=0.375,V=1200,K=4,NV=600,KAPPA=0.85;
+function rng(seed){let a=seed>>>0;const f=()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+  f.n=()=>{let u=0;while(u<1e-12)u=f();return Math.sqrt(-2*Math.log(u))*Math.cos(6.283185307*f())};return f}
+function pois(r,mu){if(mu<=0)return 0;if(mu<40){const L=Math.exp(-mu);let k=0,p=1;do{k++;p*=r()}while(p>L);return k-1}return Math.max(0,Math.round(mu+Math.sqrt(mu)*r.n()))}
+const hyp=Math.hypot;
+// Seattle's real shoreline: Census TIGER/Line 2023 area water, rasterised to 500 x 310 cells over
+// longitude -122.47..-121.97, latitude 47.495..47.705 and run-length encoded (land run first)
+const MASK="0,2a,36,s,6x,2,p,29,37,t,p,5,64,1,o,29,37,t,n,a,61,1,o,27,39,t,n,b,60,1,o,26,3b,s,m,d,5z,1,o,24,3d,t,j,f,5y,2,3,3,i,22,3f,u,h,g,5y,2,2,1,2,2,h,21,3g,w,f,f,60,3,4,1,h,1z,3i,z,c,f,61,1,6,1,g,1x,3k,12,8,f,69,1,g,1v,3m,14,5,f,69,2,g,1u,3n,1l,6a,3,h,1u,3n,1l,69,2,j,1t,3p,1k,6a,1,j,1t,3p,1k,6b,3,g,1s,3q,1j,6e,2,f,1s,3r,1i,6f,1,f,1s,3s,1h,6f,1,f,1s,3t,1g,6e,2,f,1t,3t,1f,6e,1,e,1w,3t,1d,6f,1,c,3,1,1u,3t,1d,6f,1,b,1,4,1v,3t,1d,6d,2,b,1,4,1v,3v,1b,6e,4,9,1,3,1v,3w,1a,6g,5,6,1,3,1v,45,11,6l,3,4,1,2,1u,48,z,6o,1,4,1,1,1t,4b,x,6p,1,4,1t,4d,w,6q,1,3,1t,4e,w,6q,2,2,1r,1w,3,2h,v,6u,1r,1w,3,2i,u,6u,1r,1w,4,2h,v,6t,1q,1x,6,2f,v,6t,1q,1w,b,2b,v,6t,1p,1w,c,2b,w,6s,1o,1u,f,2b,w,6s,1n,1u,g,2a,x,6s,1m,1v,f,2b,y,6r,1m,1v,d,2c,10,6q,1m,1v,c,2d,10,6q,1n,1t,d,2c,12,6p,1o,1s,d,2c,13,6o,1p,1r,c,2c,15,6n,1p,1r,b,2d,17,6l,1q,1r,9,2d,18,6l,1q,1s,7,2e,19,6k,1r,1r,6,2e,1a,6k,1r,1s,4,2e,1b,6k,1l,4,2,4a,1b,6k,1j,6,3,48,1c,6k,1h,9,2,47,1c,6l,1f,b,3,45,1d,6l,1e,c,4,43,1e,6l,1d,d,4,42,1e,6m,1c,e,6,8,1,2,2,3m,1f,6m,1c,f,7,6,6,3l,1g,6l,1b,j,6,2,9,3h,1j,6l,1a,n,f,3e,1k,6m,19,q,e,3a,1n,6m,16,v,d,39,1n,6m,13,10,3,1,9,37,1n,6m,10,1a,6,36,1o,6m,y,1d,6,35,1p,6l,y,1f,5,34,1p,6l,10,1e,c,2w,1p,6l,12,1c,d,2v,1p,6l,13,1c,d,2t,1q,6l,15,1a,e,2s,1q,6l,16,19,e,2s,1q,6l,17,18,6,2,1,3,4,2p,1q,6m,18,17,6,8,2,2o,1r,6m,19,16,6,8,4,2l,1t,6l,1a,1j,5,24,1,e,1v,2z,6,3f,1b,1j,5,21,5,b,1w,2x,8,3f,1c,1l,3,14,4,q,9,9,1w,2x,9,3e,1c,1m,3,y,9,p,b,7,1x,2w,a,3e,1d,2l,b,n,d,5,1n,3,9,2q,g,3d,1e,2k,5,3,4,k,f,5,1a,1,b,4,9,2q,g,3d,1e,2j,5,5,5,i,f,5,19,2,a,5,9,2q,g,3d,1f,2h,6,5,5,h,h,4,19,3,8,7,9,2p,h,3c,1f,2h,5,7,5,g,i,3,18,4,8,7,8,2q,h,3c,1g,2f,6,7,7,e,j,2,18,4,7,8,7,2r,i,3b,1g,1z,1,1,1,d,6,8,7,b,l,2,18,4,7,9,4,2t,j,3a,1g,1z,5,a,6,a,7,9,1w,4,7,37,i,3a,1g,1x,9,7,7,a,7,8,1x,4,6,39,i,39,1g,1x,a,6,6,b,7,9,2,9,1l,4,6,39,j,38,1g,1y,a,5,6,b,7,l,1k,4,6,39,j,38,1g,20,9,4,5,c,7,l,1c,2,6,4,6,3a,j,37,1g,21,i,a,9,j,1d,2,6,4,6,3b,j,36,1g,22,g,c,8,j,1c,4,5,4,6,3c,j,35,1h,22,e,13,1,5,17,4,5,4,6,3c,j,35,1h,22,e,1c,13,6,4,5,5,3c,k,34,1i,22,c,1h,z,7,3,4,6,3d,i,35,1i,22,c,1i,y,8,2,5,4,3f,i,34,1j,21,c,1i,y,8,2,5,3,3i,h,33,1k,21,b,1i,y,9,1,3r,i,31,1l,20,b,1i,y,42,i,30,1m,20,a,1i,y,43,i,2z,1n,1z,a,1i,y,45,h,2y,1p,1x,a,1i,y,46,h,2x,1q,1w,b,1g,z,46,i,2w,1r,1v,c,1f,z,46,i,2w,1s,1u,c,1f,z,48,h,2v,1u,1s,d,1e,z,49,h,2u,1w,1r,a,1,1,1e,10,49,g,2u,1y,f,2,18,b,1f,10,49,g,2u,20,c,3,3,2,13,b,1f,z,4b,g,2t,22,8,5,1,1,1,2,12,c,1f,z,4b,g,2t,2f,1,1,1,2,12,b,1g,z,4b,g,2t,2f,1,1,1,2,12,8,1i,10,4b,g,2t,2f,1,1,1,2,12,8,1i,10,4b,g,2t,2f,1,1,1,2,12,8,1h,11,4b,g,2t,2f,1,1,1,2,13,7,1g,11,4c,g,2t,2f,1,1,1,2,13,1,2,2,1i,11,4c,g,2t,2f,1,1,1,3,12,1,2,1,1i,12,4b,h,2t,2p,2k,12,4b,h,2t,2q,2i,13,4b,h,2t,2s,2g,13,4b,g,2u,2t,2f,14,49,h,2u,2u,2e,14,49,i,2t,2v,2d,13,49,j,2t,2w,2d,12,49,k,2s,2x,2c,12,48,l,2s,2y,2b,13,46,n,2r,2z,2a,13,45,o,2r,30,2a,12,44,p,2r,31,29,12,42,s,2q,32,28,13,40,t,2q,33,27,13,3z,u,2q,34,26,13,3y,u,2r,36,24,14,3w,v,2r,36,23,15,j,1,3b,w,2r,37,22,17,g,4,38,x,2r,36,23,1f,8,5,36,y,2r,3a,1z,1g,6,7,33,10,2r,3a,1z,1g,6,8,31,10,2s,3c,1x,1h,5,a,2y,10,2t,3c,1w,1i,5,b,2w,10,2u,3f,1t,1j,4,d,2u,10,2u,3g,1s,1j,4,e,2s,10,2v,3h,1r,1k,3,f,2r,z,2w,3i,1p,1m,1,9,2,6,2p,10,2w,3j,1o,1w,5,3,2p,z,2x,3k,1n,1v,7,2,2o,z,2y,3l,1m,1v,2x,z,2y,3l,1m,1v,2w,z,2z,3l,1m,1v,2w,y,30,3m,1l,1w,2w,x,30,3n,1j,1x,2w,w,31,3n,1j,1x,2w,u,33,3m,1k,1x,2w,u,33,3m,1j,1z,2v,t,34,3p,1g,20,2v,t,33,3n,1i,21,2u,t,33,3p,1f,23,2u,s,33,3n,1h,23,2v,r,33,3m,1i,23,2u,r,34,3m,1h,25,2t,r,34,3m,1h,25,2s,r,35,3l,1i,25,2f,1,c,q,36,2b,1,19,1i,15,4,v,2f,3,b,p,37,2a,4,17,1i,15,5,d,1,g,2e,5,a,p,37,28,7,16,1i,14,6,b,4,g,2b,7,a,o,38,27,8,15,1j,14,7,6,8,g,2a,7,b,o,38,27,9,14,1j,y,1,4,9,4,a,f,29,8,b,n,2k,2,n,26,a,14,1j,x,t,g,28,7,c,n,2g,8,l,25,b,13,1l,w,t,h,27,5,d,n,2g,9,l,25,b,13,1l,w,t,h,28,2,f,n,1c,2,11,5,q,24,c,z,1,8,1g,w,u,h,2o,o,17,5,12,3,s,23,f,w,2,3,1l,w,u,h,2o,o,16,6,11,4,s,22,g,u,4,3,1l,w,u,h,2o,p,14,6,11,5,s,21,i,t,4,3,1l,w,u,i,2o,o,10,a,11,5,s,21,j,s,4,4,1k,w,t,j,2o,o,10,9,13,2,u,20,l,m,9,3,1l,w,t,j,2o,p,y,a,13,2,u,1z,n,i,c,4,1k,w,v,i,2n,p,x,7,1,3,13,2,u,1y,o,i,c,3,1k,x,w,h,2n,q,v,4,6,2,13,1,v,1x,r,6,2,a,a,3,1k,y,z,d,2n,q,15,3,1y,1w,t,4,7,6,a,3,1j,z,10,d,2m,q,16,1,1z,1v,v,2,8,5,b,3,1j,z,11,c,2m,q,36,1u,16,4,c,3,1k,z,10,d,2l,r,35,1s,18,4,c,3,1l,y,14,9,2k,t,34,1r,19,4,c,3,1m,x,15,b,2h,u,33,1q,1a,4,c,3,1n,x,19,6,2g,y,30,1o,1c,4,c,4,1m,z,18,6,2f,z,2z,1m,1e,4,c,5,1m,y,18,7,2e,z,2z,1k,1g,4,c,5,1m,10,17,8,2c,z,2z,1i,1i,4,c,3,1o,11,18,d,25,10,2y,1g,1k,4,c,3,1p,10,18,e,24,10,2y,1e,1m,4,c,3,1p,11,17,d,26,10,2x,1d,1n,4,c,3,1p,11,17,d,26,10,2x,1f,1l,4,c,3,1q,11,15,e,27,10,2w,1g,1k,5,b,3,1q,13,13,e,28,10,2v,1h,1j,6,a,3,1q,14,12,e,29,11,2t,1j,1l,3,a,1,1s,14,11,c,2d,10,2s,1k,1m,2,8,2,1s,15,z,e,2e,z,2r,1l,1l,3,7,2,1t,14,z,f,2k,t,2q,1m,1m,2,6,2,1t,1,1,13,y,b,3,1,2l,3,2,n,2q,1m,1m,4,4,1,1u,1,2,14,v,c,1,1,2,1,2q,m,2q,1n,1m,4,3,1,1y,13,t,e,1,1,1,1,2r,2,3,i,2p,1o,1m,7,20,13,r,e,3,1,2x,i,2o,1o,1n,6,21,13,p,f,32,n,2i,1o,1o,5,22,12,p,g,31,p,2g,1o,1o,4,25,10,p,g,31,r,2e,1p,1n,4,26,z,p,h,31,q,2e,1p,1n,4,26,z,p,h,31,r,2d,1q,1n,3,27,z,o,h,32,q,2d,1r,1m,3,27,z,n,j,31,q,2d,1r,1n,3,25,10,n,k,30,q,2d,1r,1m,4,25,11,l,l,31,i,2,4,2e,1s,1l,4,26,10,l,l,31,g,5,3,2e,1s,1k,6,25,d,3,k,m,k,31,f,2n,1t,1j,6,27,a,5,j,m,j,32,g,2m,1u,1i,2,1,3,28,9,5,j,m,j,32,f,2n,1u,1i,2,1,3,28,9,6,i,m,i,33,f,2n,1v,1h,1,2,4,28,8,6,i,l,j,33,f,2n,1v,1h,1,3,3,28,8,6,i,l,i,35,d,2o,1v,1h,1,3,3,28,8,7,h,l,i,35,c,2p,1w,1g,2,4,4,26,7,7,h,l,h,37,7,2t,1w,1h,1,4,4,26,7,7,h,m,g,37,4,1,1,2u,1x,1h,7,27,7,8,g,m,f,39,3,2w,1x,1l,3,28,6,8,f,n,f,68,1y,1l,3,27,7,8,d,n,g,68,1y,1l,3,27,6,9,d,n,f,69,1y,1l,3,28,4,9,e,n,e,6a,1z,1l,2,28,4,9,e,n,d,6b,1z,1k,3,29,1,b,d,o,d,6b,20,1j,4,2j,d,p,d,6b,20,1l,2,2i,e,p,d,6b,20,1k,4,2g,e,q,d,6b,20,1k,4,29,l,q,d,6b,1z,1l,4,28,m,r,c,6b,1z,1n,3,1,1,25,m,r,c,6b,1z,1n,3,1,1,25,l,s,c,6b,1z,1o,4,25,l,s,c,6b,1z,1o,3,27,k,s,c,6b,1z,1o,3,26,l,s,c,6b,20,1n,3,26,l,s,c,6b,20,1p,2,25,k,t,c,6b,20,1p,7,1z,l,t,c,6b,21,1p,4,20,l,t,e,6a,21,1q,3,20,j,w,d,6a,21,1r,3,1x,k,x,d,6a,21,1s,3,1w,j,y,d,6a,21,1s,5,1u,j,x,e,6a,21,1u,4,1t,i,y,e,6a,21,1v,3,1t,i,x,f,6a,22,1v,3,1s,i,x,d,6c,22,1w,3,6,1,1k,i,w,e,6c,22,1x,3,4,2,1j,k,v,d,6d,22,1y,4,2,1,1k,k,u,d,6e,21,20,5,1k,l,u,c,6f,21,21,3,1l,m,t,b,6g,20,24,2,1k,n,r,b,6h,1z,26,3,1i,o,p,c,6h,1y,28,3,1i,n,o,c,6i,1y,29,3,1h,o,m,c,6j,1x,2b,4,1f,p,k,d,6j,1y,2c,3,1e,p,j,e,6j,1z,2c,3,1e,q,h,e,6j,20,2c,3,1e,q,g,e,6j,21,2c,3,1d,s,c,f,6k,22,2c,3,1c,t,a,g,6k,23,2c,2,1c,u,8,h,6k,23,2d,2,1b,v,6,h,6l,24,2c,2,1b,w,5,h,6l,24,2c,2,1b,1i,6l,24,2d,2,19,1i,6m,24,2d,2,18,1j,6m,24,2d,3,17,1i,6n,24,2d,3,17,1i,6n,23,2e,3,17,1h,6o,23,2e,4,18,1f,6o,22,2f,4,2,1,18,1b,6p,22,2f,7,19,1a,6p,21,2h,4,1c,18,6q,20,2j,2,1e,18,6p,1z,2k,3,1e,18,6o,20,2j,3,1e,19,6n,21,2i,3,1f,19,6m,22,2i,2,1g,18,6m,22,2i,3,1g,18,6l,23,2h,3,1i,17,6k,23,2h,4,1j,16,6j,23,2i,7,1h,14,6j,23,2i,9,1i,12,6i,24,2p,2,1j,10,6i,25,2q,2,1j,y,6l,22,2r,2,1k,w,6o,20,2r,1,1l,w,6o,1z,2r,1,1m,v,6q,1y,2q,1,1n,u,6s,1w,2q,1,1p,t,6s,1w,2o,1,1r,s,6t,1v,2n,1,1t,r,6v,1u,2k,3,1u,q,6x,1t,2i,3,1x,l,71,1s,2i,2,1z,k,70,1u,2h,1,21,g,73,1v,2g,1,24,c,73,1x,2f,1,25,a,73,1z,2f,1,5,6,1t,9,73,22,2e,4,6,5,90,24,2r,1,8z,27,2p,1,8z,28,2o,1,8y,2a,2n,1,8y,2b,2m,1,8x,2d,2l,1,8x,2e,2k,1,8n";
+const GW=500,GH=310,wm=new Uint8Array(GW*GH);{let p=0,b=0;for(const s of MASK.split(',')){const n=parseInt(s,36);if(b)wm.fill(1,p,p+n);p+=n;b^=1}}
+const LL=(lon,lat)=>[(lon+122.47)*200,(47.705-lat)/.21*62];
+function water(x,y){const gx=Math.min(GW-1.001,Math.max(0,x*5-.5)),gy=Math.min(GH-1.001,Math.max(0,y*5-.5)),x0=gx|0,y0=gy|0,fx=gx-x0,fy=gy-y0,i=y0*GW+x0;
+  return(wm[i]*(1-fx)+wm[i+1]*fx)*(1-fy)+(wm[i+GW]*(1-fx)+wm[i+GW+1]*fx)*fy>.5}
+function crosses(x1,y1,x2,y2){let n=0;for(let i=1;i<16;i++){const t=i/16;if(water(x1+(x2-x1)*t,y1+(y2-y1)*t)&&++n>1)return true}return false}
+const DT=LL(-122.335,47.608),BV=LL(-122.2,47.615);
+
+const R=rng(20261122);
+const centres=[[-122.335,47.608,1,4.5],[-122.313,47.661,.42,3],[-122.384,47.668,.32,3],[-122.387,47.561,.28,3],[-122.325,47.553,.28,3.5],[-122.285,47.558,.3,3],
+  [-122.2,47.615,.7,4.5],[-122.205,47.676,.3,3],[-122.12,47.672,.4,3.5],[-122.155,47.578,.25,3],[-122.035,47.535,.22,3],[-122.225,47.572,.1,2]].map(c=>[...LL(c[0],c[1]),c[2],c[3]]);
+const CATS=['Groceries','Food and drink','Retail','Workplaces','Leisure','Services'],catP=[.12,.24,.2,.18,.12,.14];
+const vx=new Float32Array(V),vy=new Float32Array(V),vc=new Uint8Array(V),va=new Float32Array(V);
+{const cw=centres.map(c=>c[2]),cs=cw.reduce((a,b)=>a+b);let n=0;
+ while(n<V){let x,y;if(R()<.2){x=R()*W;y=R()*H}else{let u=R()*cs,i=0;while(i<cw.length-1&&u>cw[i]){u-=cw[i];i++}const c=centres[i];x=c[0]+c[3]*R.n();y=c[1]+c[3]*R.n()}
+  if(x<1.5||x>W-1.5||y<1.5||y>H-1.5||water(x,y))continue;
+  let u=R(),k=0;while(k<5&&u>catP[k]){u-=catP[k];k++}
+  let a=Math.exp(.75*R.n());if(k===3&&Math.min(hyp(x-DT[0],y-DT[1]),hyp(x-BV[0],y-BV[1]))<6)a*=2.5;
+  vx[n]=x;vy[n]=y;vc[n]=k;va[n]=a;n++}}
+
+const T=[];
+for(let gy=5;gy<=57;gy+=8.6)for(let gx=6;gx<=95;gx+=8.6){const x=gx+(R()-.5)*5,y=gy+(R()-.5)*5;if(x>97||y>60||water(x,y)||water(x+1.5,y)||water(x-1.5,y))continue;T.push({x,y})}
+const C=T.length;
+{const z=T.map(t=>.55*(t.x-45)/35-.45*(t.y-30)/28+.45*R.n());
+ const mu=z.reduce((a,b)=>a+b)/C,sd=Math.sqrt(z.reduce((a,b)=>a+(b-mu)**2,0)/C);
+ const ord=z.map((v,i)=>[v,i]).sort((a,b)=>a[0]-b[0]);ord.forEach((o,r)=>T[o[1]].incRank=r/(C-1));
+ T.forEach((t,i)=>{t.zi=(z[i]-mu)/sd;const dd=Math.min(hyp(t.x-DT[0],t.y-DT[1]),hyp(t.x-BV[0],t.y-BV[1]));
+  t.rent=1/(1+Math.exp(-(1.4-dd/9+.6*R.n())));t.hh=Math.round(1800+2600*t.rent+600*R());
+  t.evOff=.7*t.zi-.8*(t.rent-.5)+.25*R.n();t.ceil=.95-.3*t.rent});
+ const ro=T.map((t,i)=>[t.rent,i]).sort((a,b)=>b[0]-a[0]);ro.forEach((o,r)=>T[o[1]].rentRank=r/(C-1))}
+const GROUPS=[{name:'Low-income neighborhoods',short:'low-income',mem:T.map(t=>t.incRank<.26)},
+              {name:'Renter-heavy neighborhoods',short:'renter-heavy',mem:T.map(t=>t.rentRank<.34)}];
+
+const TYPES=[{name:'Close to home',beta:.2,tilt:[1,.3,-.3,-1.2,-.4,.7]},{name:'Work-anchored',beta:.05,tilt:[-.6,.5,-.4,1.6,-.6,-.2]},
+             {name:'Out exploring',beta:.033,tilt:[-.8,.6,.6,-1,1.5,-.5]},{name:'Errands by car',beta:.09,tilt:[.6,-.2,1.2,-.9,-.3,.6]}];
+const dist=[],hab=[],wts=[],pi=[],p0=[];
+for(let c=0;c<C;c++){const t=T[c],d=new Float32Array(V);
+  for(let v=0;v<V;v++)d[v]=hyp(vx[v]-t.x,vy[v]-t.y)+(crosses(t.x,t.y,vx[v],vy[v])?6:0);dist.push(d);
+  const g=new Float64Array(V);let gs=0;for(let v=0;v<V;v++){g[v]=va[v]*Math.exp(-.12*d[v]);gs+=g[v]}
+  const h=new Float32Array(V).fill(1);
+  for(let a=0;a<9;a++){let u=R()*gs,v=0;while(v<V-1&&u>g[v]){u-=g[v];v++}if(h[v]===1)h[v]=3+9*R()}hab.push(h);
+  const lg=[.5-.8*t.zi,.2+.2*t.zi,-.2+.7*t.zi,.1].map(x=>x+.4*R.n()),mx=Math.max(...lg),e=lg.map(x=>Math.exp(x-mx)),es=e.reduce((a,b)=>a+b);
+  wts.push(e.map(x=>x/es))}
+// latent traits: routine rigidity, travel-cost sensitivity, charging dependence (sets the neighborhood's lift)
+{const r=rng(303);for(const t of T){t.rig=Math.min(1.6,Math.max(.45,1+.28*r.n()));t.sens=Math.min(1.5,Math.max(.6,Math.exp(.25*r.n()-.1*t.zi)));
+  t.dep=Math.min(.95,Math.max(.03,.1+.75*t.rent+.1*r.n()));t.lift=.5+1.5*t.dep}}
+for(let k=0;k<K;k++)for(let c=0;c<C;c++){const f=new Float32Array(V),d=dist[c],h=hab[c],ty=TYPES[k],tc=T[c];let s=0;
+  for(let v=0;v<V;v++){f[v]=va[v]*Math.exp(ty.tilt[vc[v]]-ty.beta*tc.sens*d[v])*(h[v]===1?1:Math.pow(h[v],tc.rig));s+=f[v]}for(let v=0;v<V;v++)f[v]/=s;pi[k*C+c]=f}
+function mixture(P,c){const f=new Float32Array(V);for(let k=0;k<K;k++){const w=wts[c][k],a=P[k*C+c];for(let v=0;v<V;v++)f[v]+=w*a[v]}return f}
+for(let c=0;c<C;c++)p0.push(mixture(pi,c));
+
+// EV share: tract offsets fixed, a common monthly term solved so the household-weighted mean follows the regional path
+const NM=144,ENDS=[.14,.19,.24],Q=[];
+{const hs=T.reduce((a,t)=>a+t.hh,0);
+ for(let p=0;p<3;p++){const qp=[];for(let m=0;m<NM;m++){const tgt=m<=71?.02+.06*Math.pow(m/71,1.4):.08+(ENDS[p]-.08)*(m-71)/72;
+   let lo=-12,hi=8;for(let it=0;it<34;it++){const g=(lo+hi)/2;let s=0;for(const t of T)s+=t.hh*t.ceil/(1+Math.exp(-(t.evOff+g)));if(s/hs<tgt)lo=g;else hi=g}
+   const g=(lo+hi)/2,q=new Float32Array(C);for(let c=0;c<C;c++)q[c]=T[c].ceil/(1+Math.exp(-(T[c].evOff+g)));qp.push(q)}Q.push(qp)}}
+
+function groupScore(P0,mem){const s=new Float64Array(V);let hs=0;for(let c=0;c<C;c++)if(mem[c]){const h=T[c].hh,f=P0[c];hs+=h;for(let v=0;v<V;v++)s[v]+=h*f[v]}for(let v=0;v<V;v++)s[v]/=hs;return s}
+function evScore(P0,q){const s=new Float64Array(V);let hs=0;for(let c=0;c<C;c++){const h=T[c].hh*q[c],f=P0[c];hs+=h;for(let v=0;v<V;v++)s[v]+=h*f[v]}for(let v=0;v<V;v++)s[v]/=hs;return s}
+const tgt=GROUPS.map(g=>groupScore(p0,g.mem));
+const res=GROUPS.map(g=>{const s=new Float64Array(V);for(let c=0;c<C;c++)if(g.mem[c]){const h=T[c].hh,d=dist[c];for(let v=0;v<V;v++)s[v]+=h*Math.exp(-d[v]/3)}return s});
+const elig=new Uint8Array(V);{const r=rng(77);for(let v=0;v<V;v++)elig[v]=r()<.4?1:0}
+const evCache=new Map();
+function evAt(path,m){const k=path*1000+m;if(!evCache.has(k))evCache.set(k,evScore(p0,Q[path][m]));return evCache.get(k)}
+
+function simulate(o){const r=rng(o.seed||1),g=o.g||0,mem=GROUPS[g].mem,lam=o.shape==='none'?0:(o.shape==='year'?.3:1)*(o.lam==null?1:o.lam);
+  const hosts=o.base.map(h=>({v:h.v,m:h.m})),isH=new Uint8Array(V);let P=pi,P0=p0,tg=tgt[g];const rs=res[g];
+  const A=new Float64Array(K*C),L=new Float64Array(K*C);
+  const addA=v=>{for(let i=0;i<K*C;i++)A[i]+=P[i][v]};
+  hosts.forEach(h=>{isH[h.v]=1;addA(h.v)});
+  let z=null;const n=o.m1-o.m0+1,S={acc:new Float32Array(n),evacc:new Float32Array(n),use:new Float32Array(n),evuse:new Float32Array(n),n:new Uint16Array(n)};
+  for(let m=o.m0;m<=o.m1;m++){
+    if(o.drift&&m>o.m0&&(m-o.m0)%3===0){if(!z)z=new Float32Array(V);for(let v=0;v<V;v++)z[v]=.98*z[v]+.085*r.n();
+      P=[];for(let i=0;i<K*C;i++){const a=pi[i],f=new Float32Array(V);let s=0;for(let v=0;v<V;v++){f[v]=a[v]*Math.exp(z[v]);s+=f[v]}for(let v=0;v<V;v++)f[v]/=s;P.push(f)}
+      P0=[];for(let c=0;c<C;c++)P0.push(mixture(P,c));tg=groupScore(P0,mem);A.fill(0);hosts.forEach(h=>addA(h.v))}
+    const q=Q[o.path][m],cnt=o.count(m);
+    if(cnt>0){const ev=o.drift&&z?evScore(P0,q):evAt(o.path,m);let em=0,tm=0;for(let v=0;v<V;v++){if(ev[v]>em)em=ev[v];if(tg[v]>tm)tm=tg[v]}
+      for(let i=0;i<cnt;i++){let best=-1,bs=-Infinity;for(let v=0;v<V;v++){if(isH[v]||!elig[v])continue;let s;
+          if(o.rule==='market')s=Math.log(ev[v]+1e-12)-Math.log(-Math.log(r()+1e-12));
+          else if(o.rule==='residence')s=rs[v];else if(o.rule==='activity')s=tg[v];else s=(1-o.w)*ev[v]/em+o.w*tg[v]/tm;
+          if(s>bs){bs=s;best=v}}
+        if(best<0)break;isH[best]=1;hosts.push({v:best,m});addA(best)}}
+    if(o.shape==='year'){L.fill(0);for(const h of hosts)if(m-h.m<12)for(let i=0;i<K*C;i++)L[i]+=P[i][h.v]}
+    let ga=0,gu=0,gh=0,ea=0,eu=0,eh=0;
+    for(let c=0;c<C;c++){let acc=0,evs=0;const lc=lam*T[c].lift;for(let k=0;k<K;k++){const a=A[k*C+c],l=o.shape==='year'?L[k*C+c]:a,w=wts[c][k];acc+=w*a;evs+=w*(a+lc*l)/(1+lc*l)}
+      const h=T[c].hh,use=(1-q[c])*acc+q[c]*evs;if(mem[c]){ga+=h*acc;gu+=h*use;gh+=h}ea+=h*q[c]*acc;eu+=h*q[c]*evs;eh+=h*q[c]}
+    const i=m-o.m0;S.acc[i]=ga/gh;S.use[i]=gu/gh;S.evacc[i]=ea/eh;S.evuse[i]=eu/eh;S.n[i]=hosts.length}
+  return{hosts,S}}
+
+const histCount=m=>Math.floor((m+1)*40/72)-Math.floor(m*40/72);
+const rollCount=pace=>m=>{const mm=m-72,N=60*pace;return Math.floor((mm+1)*N/72)-Math.floor(mm*N/72)};
+const HIST=GROUPS.map((_,g)=>simulate({m0:0,m1:71,base:[],count:histCount,rule:'market',g,path:1,shape:'none',seed:7}));
+const BASE=HIST[0].hosts;
+
+// one neighborhood: the response at chosen hosts
+function respond(c,hostList,lam,q){const base=p0[c],ev=new Float32Array(V);let acc=0,evs=0;
+  for(let k=0;k<K;k++){const a=pi[k*C+c],w=wts[c][k];let A=0;for(const h of hostList)A+=a[h];const nz=1+lam*A;
+    for(let v=0;v<V;v++)ev[v]+=w*a[v]/nz;for(const h of hostList)ev[h]+=w*a[h]*lam/nz;acc+=w*A;evs+=w*A*(1+lam)/nz}
+  const mix=new Float32Array(V);for(let v=0;v<V;v++)mix[v]=(1-q)*base[v]+q*ev[v];
+  return{base,ev,mix,acc,evs,use:(1-q)*acc+q*evs}}
+
+function oval(f,half){let idx=null;if(half){const o=Array.from({length:V},(_,i)=>i).sort((a,b)=>f[b]-f[a]);let cum=0;idx=[];for(const i of o){idx.push(i);cum+=f[i];if(cum>=.5)break}}
+  let s=0,mx=0,my=0;const it=idx||{length:V};const at=i=>idx?idx[i]:i;
+  for(let i=0;i<it.length;i++){const v=at(i);s+=f[v];mx+=f[v]*vx[v];my+=f[v]*vy[v]}mx/=s;my/=s;
+  let sxx=0,syy=0,sxy=0;for(let i=0;i<it.length;i++){const v=at(i),dx=vx[v]-mx,dy=vy[v]-my;sxx+=f[v]*dx*dx;syy+=f[v]*dy*dy;sxy+=f[v]*dx*dy}sxx/=s;syy/=s;sxy/=s;
+  const tr=sxx+syy,det=sxx*syy-sxy*sxy,disc=Math.sqrt(Math.max(0,tr*tr/4-det)),sc=half?1.5:2.146;
+  const a=Math.sqrt(Math.max(1e-6,tr/2+disc))*sc,b=Math.sqrt(Math.max(1e-6,tr/2-disc))*sc;
+  return{mx,my,a,b,th:.5*Math.atan2(2*sxy,sxx-syy),area:Math.PI*a*b*KM*KM,n:idx?idx.length:V}}
+
+// records: censored Poisson draws; inference: EM for the censored counts with a gravity prior
+function drawMonth(c,r,f){f=f||p0[c];const y=new Uint16Array(V);for(let v=0;v<V;v++)y[v]=pois(r,NV*f[v]);return y}
+const cm24=mu=>{const a=mu*mu/2,b=a*mu/3,d=b*mu/4;return(2*a+3*b+4*d)/(a+b+d)};
+function naive(months){const f=new Float32Array(V);let s=0;for(const y of months)for(let v=0;v<V;v++){const o=y[v],e=o>=5?o:o>=2?4:0;f[v]+=e;s+=e}if(s>0)for(let v=0;v<V;v++)f[v]/=s;return f}
+function gravity(c,beta){const f=new Float32Array(V),d=dist[c];let s=0;for(let v=0;v<V;v++){f[v]=va[v]*Math.exp(-beta*d[v]);s+=f[v]}for(let v=0;v<V;v++)f[v]/=s;return f}
+function infer(prior,months,kap){kap=kap||40;let p=Float32Array.from(prior);const acc=new Float64Array(V);
+  for(let it=0;it<14;it++){acc.fill(0);let s=0;for(const y of months)for(let v=0;v<V;v++){const mu=NV*p[v],o=y[v],e=o>=5?o:o>=2?cm24(mu):mu/(1+mu);acc[v]+=e;s+=e}
+    for(let v=0;v<V;v++)p[v]=(kap*prior[v]+acc[v])/(kap+s)}return p}
+const tv=(a,b)=>{let s=0;for(let v=0;v<V;v++)s+=Math.abs(a[v]-b[v]);return s/2};
+
+// latent dynamics: the true field drifts and one anchor shifts; a discounted Poisson-gamma filter tracks it from censored records
+function dynamics(c,seed){const r=rng(seed),NT=36,base=p0[c],z=new Float32Array(V),prior=gravity(c,.12);
+  const ord=Array.from({length:V},(_,i)=>i).sort((a,b)=>base[b]-base[a]),a=ord[0];let b=ord[20],bd=0;
+  for(let i=8;i<60;i++){const v=ord[i],d=hyp(vx[v]-vx[a],vy[v]-vy[a]);if(d>bd){bd=d;b=v}}
+  const truth=[],months=[],raw=[],stat=[],filt=[],eR=[],eS=[],eF=[];let acc=new Float64Array(V),sAcc=0,pf=Float32Array.from(prior);const RHO=.8,KAP=25;
+  for(let t=0;t<NT;t++){for(let v=0;v<V;v++)z[v]=.97*z[v]+.07*r.n();const f=new Float32Array(V);let s=0;
+    for(let v=0;v<V;v++)f[v]=base[v]*Math.exp(z[v]);const sh=Math.min(1,Math.max(0,(t-15)/4)),mv=.85*sh*f[a];f[a]-=mv;f[b]+=mv;
+    for(let v=0;v<V;v++)s+=f[v];for(let v=0;v<V;v++)f[v]/=s;truth.push(f);const y=drawMonth(c,r,f);months.push(y);
+    const e=new Float64Array(V);let se=0;
+    for(let it=0;it<10;it++){se=0;for(let v=0;v<V;v++){const mu=NV*pf[v],o=y[v];e[v]=o>=5?o:o>=2?cm24(mu):mu/(1+mu);se+=e[v]}
+      for(let v=0;v<V;v++)pf[v]=(KAP*prior[v]+RHO*acc[v]+e[v])/(KAP+RHO*sAcc+se)}
+    for(let v=0;v<V;v++)acc[v]=RHO*acc[v]+e[v];sAcc=RHO*sAcc+se;
+    const rw=naive([y]),st=infer(prior,months),fl=Float32Array.from(pf);raw.push(rw);stat.push(st);filt.push(fl);eR.push(tv(rw,f));eS.push(tv(st,f));eF.push(tv(fl,f))}
+  return{NT,a,b,truth,months,stat,filt,eR,eS,eF}}
+
+// traits recovered from behaviour: grid posterior for rigidity and sensitivity from censored records;
+// each neighborhood's lift by maximum likelihood, then partial pooling under a prior that depends on renter share
+let TRAIT_N=120;function traits(seed){const r=rng(seed),RG=[],SG=[],out=[];for(let i=0;i<9;i++){RG.push(.4+i*.1625);SG.push(.5+i*.1375)}
+  const hl=BASE.map(h=>h.v),q=Q[1][71],N=NV*TRAIT_N,lh=[],ls=[];
+  for(let c=0;c<C;c++){const t=T[c],d=dist[c],h=hab[c],nUn=new Uint8Array(V),nCo=new Uint8Array(V),nEx=new Uint8Array(V),sEx=new Float32Array(V);
+    for(let m=0;m<6;m++){const y=drawMonth(c,r);for(let v=0;v<V;v++){const o=y[v];if(o<2)nUn[v]++;else if(o<5)nCo[v]++;else{nEx[v]++;sEx[v]+=o}}}
+    const anc=[];for(let v=0;v<V;v++)if(h[v]!==1)anc.push(v);const g=[0,1,2,3].map(()=>new Float32Array(V)),ll=new Float64Array(81);
+    for(let si=0;si<9;si++){const S0=[0,0,0,0];for(let k=0;k<K;k++){const ty=TYPES[k],gk=g[k];let s=0;for(let v=0;v<V;v++){gk[v]=va[v]*Math.exp(ty.tilt[vc[v]]-ty.beta*SG[si]*d[v]);s+=gk[v]}S0[k]=s}
+      for(let ri=0;ri<9;ri++){const hp=anc.map(v=>Math.pow(h[v],RG[ri])),Sk=S0.slice();for(let k=0;k<K;k++)for(let i=0;i<anc.length;i++)Sk[k]+=g[k][anc[i]]*(hp[i]-1);
+        const c0=wts[c][0]/Sk[0],c1=wts[c][1]/Sk[1],c2=wts[c][2]/Sk[2],c3=wts[c][3]/Sk[3];let L=0,ai=0;
+        for(let v=0;v<V;v++){let f=c0*g[0][v]+c1*g[1][v]+c2*g[2][v]+c3*g[3][v];if(ai<anc.length&&anc[ai]===v){f*=hp[ai];ai++}
+          const mu=NV*f;L+=nUn[v]*(Math.log(1+mu)-mu);if(nCo[v])L+=nCo[v]*(Math.log(mu*mu/2+mu*mu*mu/6+mu*mu*mu*mu/24)-mu);if(nEx[v])L+=sEx[v]*Math.log(mu)-nEx[v]*mu}
+        ll[si*9+ri]=L}}
+    let mx=-Infinity;for(const x of ll)if(x>mx)mx=x;let sw=0,mr=0,ms=0,vr=0,vs=0;
+    for(let i=0;i<81;i++){const w=Math.exp(ll[i]-mx);sw+=w;mr+=w*RG[i%9];ms+=w*SG[(i/9)|0]}mr/=sw;ms/=sw;
+    for(let i=0;i<81;i++){const w=Math.exp(ll[i]-mx);vr+=w*(RG[i%9]-mr)**2;vs+=w*(SG[(i/9)|0]-ms)**2}
+    const Ak=[];let acc=0;for(let k=0;k<K;k++){let a=0;const f=pi[k*C+c];for(const v of hl)a+=f[v];Ak.push(a);acc+=wts[c][k]*a}
+    const use=l=>{let e=0;for(let k=0;k<K;k++)e+=wts[c][k]*Ak[k]*(1+l)/(1+l*Ak[k]);return(1-q[c])*acc+q[c]*e},pre=pois(r,N*acc),post=pois(r,N*use(t.lift));
+    const lf=l=>{const u=use(l),p=u/(u+acc);return post*Math.log(p)+pre*Math.log(1-p)};let bl=-Infinity,best=0;for(let l=0;l<=4.001;l+=.05){const v=lf(l);if(v>bl){bl=v;best=l}}
+    const cur=(lf(best+.1)-2*bl+lf(Math.max(0,best-.1)))/.01;lh.push(best);ls.push(cur<0?Math.min(2,Math.sqrt(-1/cur)):2);
+    out.push({rig:{m:mr,s:Math.max(.02,Math.sqrt(vr/sw)),t:t.rig},sens:{m:ms,s:Math.max(.02,Math.sqrt(vs/sw)),t:t.sens}})}
+  let tau2=.1,a=1,b=0;for(let it=0;it<4;it++){let sw=0,sx=0,sy=0,sxx=0,sxy=0;for(let c=0;c<C;c++){const w=1/(ls[c]**2+tau2),x=T[c].rent;sw+=w;sx+=w*x;sy+=w*lh[c];sxx+=w*x*x;sxy+=w*x*lh[c]}
+    b=(sw*sxy-sx*sy)/(sw*sxx-sx*sx);a=(sy-b*sx)/sw;let num=0;for(let c=0;c<C;c++){const w=1/(ls[c]**2+tau2);num+=w*((lh[c]-a-b*T[c].rent)**2-ls[c]**2)}tau2=Math.max(.01,num/sw)}
+  for(let c=0;c<C;c++){const pr=1/ls[c]**2+1/tau2,m=(lh[c]/ls[c]**2+(a+b*T[c].rent)/tau2)/pr;out[c].dep={m:Math.min(1,Math.max(0,(m-.5)/1.5)),s:Math.sqrt(1/pr)/1.5,t:T[c].dep}}
+  return out}
+
+// discovery: three rival response laws, belief updated opening by opening; sites either chosen for information or as the market sites
+let DISC_N=.6;const LG=[];for(let i=1;i<=25;i++)LG.push(i*.1);
+const TRUE={lasting:[1,1],year:[.6,0],none:[0,0]},LAWS=['none','year','lasting'];
+function siteRatio(c,v,l){const p=p0[c][v];if(p<=0)return 1;const q=Q[1][71][c],lc=l*T[c].lift;let e=0;for(let k=0;k<K;k++){const a=pi[k*C+c][v];e+=wts[c][k]*a*(1+lc)/(1+lc*a)}return(1-q)+q*e/p}
+const infoScore=new Float64Array(V);for(let c=0;c<C;c++){const w=(Q[1][71][c]*T[c].lift)**2,f=p0[c];for(let v=0;v<V;v++)infoScore[v]+=w*f[v]}
+function discover(truth,strategy,seed,n){const r=rng(seed),N12=NV*DISC_N,used=new Uint8Array(V),ev=evAt(1,71),dY=new Float64Array(25),dL=new Float64Array(25),steps=[],tl=TRUE[truth];
+  for(let i=0;i<n;i++){let best=-1,bs=-Infinity;for(let v=0;v<V;v++){if(used[v]||!elig[v])continue;const s=strategy==='model'?infoScore[v]:Math.log(ev[v]+1e-12)-Math.log(-Math.log(r()+1e-12));if(s>bs){bs=s;best=v}}
+    used[best]=1;
+    for(let c=0;c<C;c++){const b=N12*p0[c][best];if(b<.02)continue;const y1=pois(r,b*siteRatio(c,best,tl[0])),y2=pois(r,b*siteRatio(c,best,tl[1]));
+      for(let j=0;j<25;j++){const rr=siteRatio(c,best,LG[j]),lr=Math.log(rr);dY[j]+=y1*lr-b*(rr-1);dL[j]+=(y1+y2)*lr-2*b*(rr-1)}}
+    let mx=0;for(let j=0;j<25;j++){if(dY[j]>mx)mx=dY[j];if(dL[j]>mx)mx=dL[j]}
+    let sy=0,sl=0;const wy=[],wl=[];for(let j=0;j<25;j++){wy.push(Math.exp(dY[j]-mx)/25);wl.push(Math.exp(dL[j]-mx)/25);sy+=wy[j];sl+=wl[j]}
+    const pn=Math.exp(-mx),tot=pn+sy+sl,w=sl>=sy?wl:wy,ws=sl>=sy?sl:sy;let lm=0,lv=0;for(let j=0;j<25;j++)lm+=w[j]*LG[j]/ws;for(let j=0;j<25;j++)lv+=w[j]*(LG[j]-lm)**2/ws;
+    steps.push({v:best,p:[pn/tot,sy/tot,sl/tot],lm,ls:Math.sqrt(lv)})}
+  return steps}
+function discoverCurves(truth,n,reps){const ti=LAWS.indexOf(truth),out={};
+  for(const st of['model','market']){const runs=[];for(let i=0;i<reps;i++)runs.push(discover(truth,st,900+i,n));const md=[],hit=[];
+    for(let j=0;j<n;j++){const v=runs.map(r=>r[j].p[ti]).sort((a,b)=>a-b);md.push(v[Math.floor((reps-1)/2)])}
+    for(const r of runs){let k=n+1;for(let j=0;j<n;j++)if(r[j].p[ti]>=.95){k=j+1;break}hit.push(k)}hit.sort((a,b)=>a-b);out[st]={md,to95:hit[Math.floor((reps-1)/2)]}}
+  return out}
+
+// validation 1: expected log score of held-out visits, per visit
+function scores(seed){const r=rng(seed);const betas=[.05,.08,.12,.18,.25];let bb=.12,bs=-Infinity;
+  const sc=(f,c)=>{let s=0;const t=p0[c];for(let v=0;v<V;v++)if(t[v]>0)s+=t[v]*Math.log(f[v]+1e-12);return s};
+  for(const b of betas){let s=0;for(let c=0;c<C;c++)s+=sc(gravity(c,b),c);if(s>bs){bs=s;bb=b}}
+  let G=0,Lg=0,Lt=0,Pe=0,Tr=0;
+  for(let c=0;c<C;c++){const g=gravity(c,bb),months=[];for(let t=0;t<12;t++)months.push(drawMonth(c,r));const nv=naive(months);
+    const gc=new Float64Array(6),nc=new Float64Array(6);for(let v=0;v<V;v++){gc[vc[v]]+=g[v];nc[vc[v]]+=nv[v]}
+    const lg=new Float32Array(V);let s=0;for(let v=0;v<V;v++){lg[v]=g[v]*(nc[vc[v]]+.02)/(gc[vc[v]]+.02);s+=lg[v]}for(let v=0;v<V;v++)lg[v]/=s;
+    const lt=infer(lg,months,40),last=naive([months[11]]),pe=new Float32Array(V);for(let v=0;v<V;v++)pe[v]=.9*last[v]+.1/V;
+    G+=sc(g,c);Lg+=sc(lg,c);Lt+=sc(lt,c);Pe+=sc(pe,c);Tr+=sc(p0[c],c)}
+  return{logit:(Lg-G)/C,latent:(Lt-G)/C,persist:(Pe-G)/C,truth:(Tr-G)/C}}
+
+// validation 2: recover the lift from how the host gain scales with EV share
+function dose(seed,lam){const r=rng(seed),hl=BASE.map(h=>h.v),q=Q[1][71],N=NV*12,rows=[];
+  for(let c=0;c<C;c++){const Ak=[];let acc=0;for(let k=0;k<K;k++){let a=0;const f=pi[k*C+c];for(const h of hl)a+=f[h];Ak.push(a);acc+=wts[c][k]*a}
+    const use=l=>{let e=0;for(let k=0;k<K;k++)e+=wts[c][k]*Ak[k]*(1+l)/(1+l*Ak[k]);return(1-q[c])*acc+q[c]*e};
+    rows.push({q:q[c],acc,use,pre:pois(r,N*acc),post:pois(r,N*use(lam))})}
+  // maximum likelihood for the lift: post | pre + post is binomial with odds use(lift) / access
+  const ll=l=>{let s=0;for(const x of rows){const u=x.use(l),p=u/(u+x.acc);s+=x.post*Math.log(p)+x.pre*Math.log(1-p)}return s};
+  let best=0,bl=-Infinity;for(let l=0;l<=3.0001;l+=.01){const v=ll(l);if(v>bl){bl=v;best=l}}
+  const h=.05,cur=(ll(best+h)-2*bl+ll(Math.max(0,best-h)))/(h*h),se=cur<0?Math.sqrt(-1/cur):NaN;
+  rows.sort((a,b)=>a.q-b.q);const nb=8,pts=[];
+  for(let b=0;b<nb;b++){const sl=rows.slice(Math.floor(b*C/nb),Math.floor((b+1)*C/nb));let pre=0,post=0,qs=0,a=0,uf=0,ut=0;
+    for(const x of sl){pre+=x.pre;post+=x.post;qs+=x.q*x.acc;a+=x.acc;uf+=x.use(best);ut+=x.use(lam)}
+    if(pre>=5)pts.push({x:qs/a,y:post/pre-1,fit:uf/a-1,tru:ut/a-1})}
+  return{pts,lam:best,se}}
+
+return{W,H,KM,V,K,C,NV,KAPPA,T,GROUPS,TYPES,CATS,vx,vy,vc,va,dist,hab,wts,pi,p0,Q,tgt,res,water,LL,rng,simulate,histCount,rollCount,HIST,BASE,
+  setDiscN:x=>{DISC_N=x},setTraitN:x=>{TRAIT_N=x},respond,oval,drawMonth,dynamics,traits,discover,discoverCurves,LAWS,naive,gravity,infer,tv,scores,dose,evAt,groupScore}})();
+if(typeof module!=='undefined')module.exports=WM;
+</script>
+
+<script>
+(()=>{'use strict';
+const M=WM,{W,H,V,K,C,T,KM}=M,$=id=>document.getElementById(id);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const pct=(x,d=1)=>(100*x).toFixed(d)+'%';
+const monthName=m=>['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m%12]+' '+(2019+Math.floor(m/12));
+const big=(s,b,l)=>{$('bg-'+s).innerHTML=b;$('bl-'+s).innerHTML=l};
+const FONT='"Libre Franklin","Helvetica Neue",Arial,sans-serif';
+
+// default neighborhood: a low-income one in south-east Seattle
+let c0=0,bd=1e9;T.forEach((t,i)=>{const d=Math.hypot(t.x-36,t.y-45)+(M.GROUPS[0].mem[i]?0:30);if(d<bd){bd=d;c0=i}});
+const S={stage:'state',c:c0,type:-1,all:false,obView:'records',obT:6,obSeed:3,lam:1,q:.15,ivView:'ev',st:[],relax:12,
+  dyM:23,dyView:'filter',dySeed:2,trait:'dep',dcTruth:'lasting',dcStrat:'model',dcSeed:1,dcN:5,g:0,rpRule:'activity',rpM:71,roRule:'market',pace:1,path:1,shape:'step',drift:false,roM:143,w:.5,doseSeed:1};
+function defaultStations(){const f=M.p0[S.c],o=Array.from({length:V},(_,i)=>i).sort((a,b)=>f[b]-f[a]);S.st=[o[7],o[16]]}
+defaultStations();
+
+// ---------- theme ----------
+let TH=null;
+function hex(h){h=h.trim();return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function readTheme(){const cs=getComputedStyle(document.documentElement),g=n=>cs.getPropertyValue(n).trim();
+  TH={ink:g('--ink'),muted:g('--muted'),line:g('--line'),ev:g('--ev'),target:g('--target'),ref:g('--ref'),bg:g('--bg'),surface:g('--surface'),land:g('--r0'),
+    water:hex(g('--water')),contour:hex(g('--contour')),ramp:[0,1,2,3,4,5,6,7,8].map(i=>hex(g('--r'+i)))}}
+
+// ---------- terrain: painted 150 units wide, so the land continues east under the floating column ----------
+const WE=150,GX=WE*2,GY=124,PW=WE*10,PH=620,off=document.createElement('canvas');off.width=PW;off.height=PH;
+const octx=off.getContext('2d'),img=octx.createImageData(PW,PH),wmask=new Uint8Array(PW*PH);
+for(let y=0;y<PH;y++)for(let x=0;x<W*10;x++)wmask[y*PW+x]=M.water((x+.5)/10,(y+.5)/10)?1:0;
+const KR=7,kern=new Float32Array((2*KR+1)**2);{let s=0;for(let j=-KR;j<=KR;j++)for(let i=-KR;i<=KR;i++){const k=Math.exp(-(i*i+j*j)/(2*2.4*2.4));kern[(j+KR)*(2*KR+1)+i+KR]=k;s+=k}for(let i=0;i<kern.length;i++)kern[i]/=s}
+function splat(f){const G=new Float32Array(GX*GY);for(let v=0;v<V;v++){const m=f[v];if(m<1e-7)continue;const cx=Math.round(M.vx[v]*2),cy=Math.round(M.vy[v]*2);
+  for(let j=-KR;j<=KR;j++){const y=cy+j;if(y<0||y>=GY)continue;for(let i=-KR;i<=KR;i++){const x=cx+i;if(x<0||x>=GX)continue;G[y*GX+x]+=m*kern[(j+KR)*(2*KR+1)+i+KR]}}}return G}
+function gmax(G){let m=0;for(let i=0;i<G.length;i++)if(G[i]>m)m=G[i];return m}
+function paint(f,ref){const d=img.data,ramp=TH.ramp,NB=ramp.length,wc=TH.water,lc=TH.contour;let L=null,hi=0,lo=0;
+  if(f){const G=splat(f);L=new Float32Array(GX*GY);hi=Math.log(ref||gmax(G));lo=hi-6.4;for(let i=0;i<L.length;i++)L[i]=Math.log(G[i]+1e-9)}
+  for(let py=0;py<PH;py++){const gy=Math.min(GY-1.001,Math.max(0,(py+.5)/5-.5)),y0=gy|0,fy=gy-y0;
+    for(let px=0;px<PW;px++){const o=(py*PW+px)*4;let col;
+      if(wmask[py*PW+px])col=wc;
+      else if(!L)col=ramp[0];
+      else{const gx=Math.min(GX-1.001,Math.max(0,(px+.5)/5-.5)),x0=gx|0,fx=gx-x0,i=y0*GX+x0;
+        const val=(L[i]*(1-fx)+L[i+1]*fx)*(1-fy)+(L[i+GX]*(1-fx)+L[i+GX+1]*fx)*fy;
+        let t=(val-lo)/(hi-lo);t=t<0?0:t>.9999?.9999:t;const b=t*NB,bi=b|0,r=ramp[bi];
+        if(bi>0&&b-bi<.075){d[o]=r[0]*.72+lc[0]*.28;d[o+1]=r[1]*.72+lc[1]*.28;d[o+2]=r[2]*.72+lc[2]*.28;d[o+3]=255;continue}col=r}
+      d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];d[o+3]=255}}
+  octx.putImageData(img,0,0)}
+
+// ---------- caches ----------
+const memo=new Map();function cached(k,fn){if(!memo.has(k))memo.set(k,fn());return memo.get(k)}
+function obsData(){return cached('ob'+S.c+'_'+S.obSeed,()=>{const r=M.rng(1000*S.c+S.obSeed),months=[];for(let t=0;t<25;t++)months.push(M.drawMonth(S.c,r));
+  const prior=M.gravity(S.c,.12),en=[],ei=[],inf=[];for(let t=1;t<=24;t++){const ms=months.slice(0,t),f=M.infer(prior,ms);inf.push(f);en.push(M.tv(M.naive(ms),M.p0[S.c]));ei.push(M.tv(f,M.p0[S.c]))}
+  let hid=0,tot=0;const y=months[0];for(let v=0;v<V;v++){tot+=y[v];if(y[v]<2)hid+=y[v]}
+  return{months,en,ei,inf,hid:hid/Math.max(1,tot),churn:M.tv(M.naive([months[0]]),M.naive([months[1]]))}})}
+function dynData(){return cached('dy'+S.c+'_'+S.dySeed,()=>M.dynamics(S.c,500*S.c+S.dySeed))}
+function trData(){return cached('tr',()=>M.traits(41))}
+function dcRun(){return cached('dc'+S.dcTruth+S.dcStrat+S.dcSeed,()=>M.discover(S.dcTruth,S.dcStrat,S.dcSeed,30))}
+function dcCurves(){return cached('dcc'+S.dcTruth,()=>M.discoverCurves(S.dcTruth,30,24))}
+function replayAlt(){return cached('rp'+S.g+S.rpRule,()=>M.simulate({m0:0,m1:71,base:[],count:M.histCount,rule:S.rpRule,g:S.g,path:1,shape:'none',seed:3}))}
+function rollKey(rule){return['ro',S.g,rule,S.pace,S.path,S.shape,S.drift].join('_')}
+function rollRuns(rule){return cached(rollKey(rule),()=>{const nd=(rule==='market'||S.drift)?8:1,runs=[];
+  for(let i=0;i<nd;i++)runs.push(M.simulate({m0:72,m1:143,base:M.BASE,count:M.rollCount(S.pace),rule,g:S.g,w:.5,path:S.path,shape:S.shape,drift:S.drift,seed:11+i}));return runs})}
+function frontier(){return cached('fr'+S.g+'_'+S.pace,()=>{const run=(rule,w,seed)=>{const r=M.simulate({m0:72,m1:143,base:M.BASE,count:M.rollCount(S.pace),rule,g:S.g,w,path:1,shape:'none',seed});return{x:r.S.evacc[71],y:r.S.acc[71],hosts:r.hosts}};
+  const pts=[];for(let i=0;i<=20;i++)pts.push(run('mix',i/20,1));let mx=0,my=0;const mk=[];for(let i=0;i<6;i++){const r=run('market',0,21+i);mk.push(r);mx+=r.x/6;my+=r.y/6}
+  return{pts,market:{x:mx,y:my},mk,res:run('residence',0,1),base:{x:M.HIST[S.g].S.evacc[71],y:M.HIST[S.g].S.acc[71]}}})}
+const med=a=>{const s=Array.from(a).sort((x,y)=>x-y);return s[Math.floor((s.length-1)/2)]};
+
+// ---------- map ----------
+const map=$('map'),stage=$('stage'),mctx=map.getContext('2d');let mw=0,mh=0,dpr=1;
+function sizeMap(){const sw=stage.clientWidth,fl=sw>=1120;stage.classList.toggle('float',fl);
+  map.style.aspectRatio=fl?'auto':'';map.style.height=fl?Math.round((sw-380)*H/W)+'px':'';
+  const r=map.getBoundingClientRect();dpr=Math.min(2,window.devicePixelRatio||1);mw=r.width;mh=r.height;map.width=Math.round(mw*dpr);map.height=Math.round(mh*dpr)}
+function ivState(){const R=M.respond(S.c,S.st,S.lam*T[S.c].lift,S.q),a=S.relax<=0?0:1-Math.pow(1-M.KAPPA,S.relax);
+  const ev=new Float32Array(V),mix=new Float32Array(V);for(let v=0;v<V;v++){ev[v]=R.base[v]+a*(R.ev[v]-R.base[v]);mix[v]=(1-S.q)*R.base[v]+S.q*ev[v]}return{R,ev,mix,a}}
+function mapField(){const c=S.c;
+  if(S.stage==='state')return{f:S.type<0?M.p0[c]:M.pi[S.type*C+c],ref:'c'};
+  if(S.stage==='observe'){const o=obsData();return S.obView==='records'?{f:null}:{f:S.obView==='truth'?M.p0[c]:o.inf[S.obT-1],ref:'c'}}
+  if(S.stage==='dynamics'){const d=dynData(),t=S.dyM;return S.dyView==='records'?{f:null}:{f:d[S.dyView==='truth'?'truth':S.dyView==='static'?'stat':'filt'][t],ref:'c'}}
+  if(S.stage==='intervene'){const s=ivState();return{f:S.ivView==='ev'?s.ev:s.mix,ref:'c'}}
+  if(S.stage==='traits')return{f:M.p0[c],ref:'c'};
+  if(S.stage==='verify'||S.stage==='discovery')return{f:M.evAt(1,71)};
+  return{f:M.tgt[S.g]}}
+function drawMap(){if(!mw)return;const g=mctx,s=mh/H,F=mapField();
+  const ref=F.ref==='c'?cached('gm'+S.c,()=>gmax(splat(M.p0[S.c]))):0;paint(F.f,ref);
+  g.setTransform(dpr,0,0,dpr,0,0);g.fillStyle=TH.land;g.fillRect(0,0,mw,mh);g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+  const vis=Math.min(WE,mw/s);g.drawImage(off,0,0,vis*10,PH,0,0,vis*s,mh);
+  const X=x=>x*s,Y=y=>y*s,sq=(v,r,fill,stroke,lw)=>{g.beginPath();g.rect(X(M.vx[v])-r,Y(M.vy[v])-r,2*r,2*r);if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=lw||1.5;g.stroke()}};
+  const ell=(o,col,lw,dash)=>{g.beginPath();g.ellipse(X(o.mx),Y(o.my),o.a*s,o.b*s,o.th,0,6.2832);g.setLineDash(dash||[]);g.strokeStyle=col;g.lineWidth=lw;g.stroke();g.setLineDash([])};
+  // water names, italic as on a chart; graticule ticks on the frame
+  g.font='italic 12.5px "STIX Two Text","Times New Roman",serif';g.fillStyle=TH.muted;g.textAlign='center';g.textBaseline='middle';
+  for(const[lon,lat,name,rot]of[[-122.432,47.637,'Puget Sound',0],[-122.262,47.635,'Lake Washington',1],[-122.087,47.6,'Lake Sammamish',1]]){const[px,py]=M.LL(lon,lat);g.save();g.translate(X(px),Y(py));if(rot)g.rotate(-Math.PI/2*.92);g.fillText(name,0,0);g.restore()}
+  g.font='10.5px '+FONT;g.strokeStyle=TH.muted;g.lineWidth=1;g.globalAlpha=.85;
+  for(const lon of[-122.4,-122.3,-122.2,-122.1,-122]){const px=X(M.LL(lon,47.6)[0]);g.beginPath();g.moveTo(px,0);g.lineTo(px,6);g.stroke();g.textAlign='center';g.textBaseline='top';g.fillText((-lon).toFixed(1)+'°W',px,8)}
+  for(const lat of[47.55,47.6,47.65]){const py=Y(M.LL(-122.4,lat)[1]);g.beginPath();g.moveTo(0,py);g.lineTo(6,py);g.stroke();g.textAlign='left';g.textBaseline='middle';g.fillText(lat.toFixed(2)+'°N',9,py)}
+  g.globalAlpha=1;
+  // venues
+  g.fillStyle=TH.ink;g.globalAlpha=.2;for(let v=0;v<V;v++){g.beginPath();g.arc(X(M.vx[v]),Y(M.vy[v]),Math.max(.7,.09*s),0,6.2832);g.fill()}g.globalAlpha=1;
+  const st=S.stage,single=st==='state'||st==='observe'||st==='intervene'||st==='dynamics'||st==='traits',t=T[S.c];
+  const lines=(f,col,n,alpha)=>{const o=Array.from({length:V},(_,i)=>i).sort((a,b)=>f[b]-f[a]).slice(0,n);g.strokeStyle=col;g.globalAlpha=alpha;g.lineCap='round';
+    for(const v of o){g.lineWidth=Math.max(.6,Math.sqrt(f[v])*s*1.5);g.beginPath();g.moveTo(X(t.x),Y(t.y));g.lineTo(X(M.vx[v]),Y(M.vy[v]));g.stroke()}g.globalAlpha=1};
+  if(st==='state'){const f=F.f;
+    if(S.all)for(let c=0;c<C;c++)if(c!==S.c)ell(cached('ov'+c,()=>M.oval(M.p0[c],false)),TH.ink,.7,[3,3]);
+    lines(f,TH.ink,14,.5);ell(M.oval(f,false),TH.ink,1.3,[5,4]);ell(M.oval(f,true),TH.ink,2.2)}
+  if(st==='dynamics'){const d=dynData(),tt=S.dyM;ell(M.oval(d.truth[tt],true),TH.ink,1.3,[5,4]);ell(M.oval(d.filt[tt],true),TH.ev,2);
+    g.font='500 11.5px '+FONT;g.textBaseline='middle';g.textAlign='left';
+    for(const[v,l]of[[d.a,'old anchor'],[d.b,'new anchor']]){g.beginPath();g.arc(X(M.vx[v]),Y(M.vy[v]),.9*s,0,6.2832);g.strokeStyle=TH.ink;g.lineWidth=1.6;g.stroke();g.lineJoin='round';g.strokeStyle=TH.surface;g.lineWidth=3.5;g.strokeText(l,X(M.vx[v])+1.4*s,Y(M.vy[v])-1.5*s);g.fillStyle=TH.ink;g.fillText(l,X(M.vx[v])+1.4*s,Y(M.vy[v])-1.5*s)}}
+  if((st==='observe'&&S.obView==='records')||(st==='dynamics'&&S.dyView==='records')){const y=st==='observe'?obsData().months[0]:dynData().months[S.dyM];for(let v=0;v<V;v++){const o=y[v];if(o<2)continue;g.beginPath();
+    if(o>=5){g.arc(X(M.vx[v]),Y(M.vy[v]),Math.sqrt(o)*.22*s,0,6.2832);g.fillStyle=TH.ink;g.globalAlpha=.8;g.fill();g.globalAlpha=1}
+    else{g.arc(X(M.vx[v]),Y(M.vy[v]),.44*s,0,6.2832);g.strokeStyle=TH.ink;g.lineWidth=1.1;g.stroke()}}}
+  if(st==='intervene'){const iv=ivState();ell(M.oval(iv.R.base,false),TH.ink,1.1,[5,4]);ell(M.oval(iv.mix,false),TH.ev,1.6);
+    if(S.st.length){g.strokeStyle=TH.ev;g.lineCap='round';for(const v of S.st){g.globalAlpha=.9;g.lineWidth=Math.max(1.2,Math.sqrt(iv.ev[v])*s*2.2);g.beginPath();g.moveTo(X(t.x),Y(t.y));g.lineTo(X(M.vx[v]),Y(M.vy[v]));g.stroke()}g.globalAlpha=1}
+    for(const v of S.st)sq(v,.75*s,TH.ev,TH.bg,1.5)}
+  if(st==='discovery'){const d=dcRun();for(let i=0;i<S.dcN;i++)sq(d[i].v,.6*s,TH.ev,TH.bg,1.2);if(S.dcN<30){const v=d[S.dcN].v;g.beginPath();g.arc(X(M.vx[v]),Y(M.vy[v]),1.3*s,0,6.2832);g.strokeStyle=TH.ink;g.lineWidth=2;g.setLineDash([4,3]);g.stroke();g.setLineDash([])}}
+  if(st==='replay'){for(const h of M.HIST[S.g].hosts)if(h.m<=S.rpM)sq(h.v,.58*s,null,TH.ink,1.5);for(const h of replayAlt().hosts)if(h.m<=S.rpM)sq(h.v,.5*s,TH.ev,TH.bg,1)}
+  if(st==='rollout'){const run=memo.get(rollKey(S.roRule));for(const h of M.BASE)sq(h.v,.38*s,TH.ink,null);if(run)for(const h of run[0].hosts)if(h.m>=72&&h.m<=S.roM)sq(h.v,.52*s,TH.ev,TH.bg,1)}
+  if(st==='plan'){const fr=frontier(),p=fr.pts[Math.round(S.w*20)];for(const h of M.BASE)sq(h.v,.38*s,TH.ink,null);for(const h of p.hosts)if(h.m>=72)sq(h.v,.52*s,TH.ev,TH.bg,1)}
+  if(st==='verify')for(const h of M.BASE)sq(h.v,.52*s,TH.ev,TH.bg,1);
+  // homes: small dots; a ring marks the selected one; the target group is the only pink on the map
+  const dotc=(x,y,r,fill,a,stroke,lw)=>{g.beginPath();g.arc(X(x),Y(y),r,0,6.2832);if(fill){g.globalAlpha=a;g.fillStyle=fill;g.fill();g.globalAlpha=1}if(stroke){g.strokeStyle=stroke;g.lineWidth=lw;g.stroke()}};
+  for(let c=0;c<C;c++){const tt=T[c],sel=single&&c===S.c,inG=!single&&st!=='verify'&&st!=='discovery'&&M.GROUPS[S.g].mem[c];
+    if(st==='traits'){const d=trData(),k=S.trait,lo=Math.min(...d.map(x=>x[k].m)),hi=Math.max(...d.map(x=>x[k].m)),u=(d[c][k].m-lo)/(hi-lo||1);dotc(tt.x,tt.y,(.4+1.4*u)*s,sel?TH.ev:TH.surface,sel?1:.8,TH.ink,sel?2:.9);continue}
+    if(st==='verify'){dotc(tt.x,tt.y,(.4+5*M.Q[1][71][c])*s,TH.surface,.8,TH.ink,.9);continue}
+    if(sel){dotc(tt.x,tt.y,1.15*s,null,1,TH.ink,2);dotc(tt.x,tt.y,.42*s,TH.ink,1)}
+    else if(inG)dotc(tt.x,tt.y,.55*s,TH.target,1,TH.bg,1);
+    else dotc(tt.x,tt.y,Math.max(2.2,.36*s),TH.surface,.9,TH.ink,.8)}
+  // scale bar: 5 km
+  const sb=5/KM,bx=X(3),by=Y(H-2.4);g.strokeStyle=TH.ink;g.lineWidth=1.5;g.beginPath();g.moveTo(bx,by-4);g.lineTo(bx,by);g.lineTo(bx+X(sb),by);g.lineTo(bx+X(sb),by-4);g.stroke();
+  g.fillStyle=TH.ink;g.font='500 11px '+FONT;g.textAlign='center';g.textBaseline='alphabetic';g.fillText('5 km',bx+X(sb/2),by-6)}
+
+function who(){const t=T[S.c],tags=[];if(M.GROUPS[0].mem[S.c])tags.push('low-income');if(M.GROUPS[1].mem[S.c])tags.push('renter-heavy');
+  return`<span class="who">Neighborhood ${S.c+1}</span> (${t.hh.toLocaleString()} households${tags.length?', '+tags.join(', '):''}). `}
+function note(){const grp='Shading shows where '+M.GROUPS[S.g].short+' neighborhoods (pink) spend their visits. ';const n={
+  state:who()+'Brighter shading is lower energy: more of this neighborhood\'s visits. Lines run from home to its most-visited venues. Solid ellipse: habitual core. Dashed: full range.',
+  observe:who()+(S.obView==='records'?'Filled dots are venues with an exact count, sized by count. Rings are counts of 2 to 4, reported as 4. Everything else is withheld.':S.obView==='inferred'?'The field inferred from '+S.obT+' month'+(S.obT>1?'s':'')+' of censored records.':'The field the records were drawn from.'),
+  dynamics:who()+(S.dyView==='records'?'This month\'s censored records: filled dots are exact counts, rings are counts of 2 to 4.':'Blue ellipse: the habitual core as the filter sees it. Dashed ellipse: the true core. The two ringed venues are the anchor that fades and the one that takes over.'),
+  traits:who()+'Each circle is a neighborhood, sized by the recovered trait; the blue one is selected. Shading is the selected neighborhood\'s landscape.',
+  discovery:'Shading shows where EV households spend their visits. Blue squares: openings observed so far. Dashed ring: the site observed next.',
+  intervene:who()+'Squares are stations. Blue lines and the blue ellipse show the response; the dashed ellipse is the oval before any station.',
+  replay:grp+'Open squares: stations as the market sited them. Blue squares: the same openings re-sited.',
+  rollout:grp+'Small squares: stations open in 2024. Blue squares: stations added in this run.',
+  plan:grp+'Small squares: stations open in 2024. Blue squares: the stations this plan adds by 2030.',
+  verify:'Shading shows where EV households spend their visits. Squares are stations; each circle is a neighborhood, sized by its share of EV households.'};
+  $('mapnote').innerHTML=n[S.stage]+' Synthetic data on Seattle\'s real shoreline.'}
+
+// ---------- charts ----------
+function chart(cv,o){const r=cv.getBoundingClientRect();if(!r.width)return;const d=Math.min(2,window.devicePixelRatio||1);cv.width=r.width*d;cv.height=r.height*d;const g=cv.getContext('2d');g.setTransform(d,0,0,d,0,0);
+  const ml=o.ml||40,mr=10,mt=8,mb=o.xt?21:6,w=r.width-ml-mr,h=r.height-mt-mb,X=x=>ml+(x-o.x0)/(o.x1-o.x0)*w,Y=y=>mt+h-(y-o.y0)/(o.y1-o.y0)*h;
+  g.font='12px '+FONT;g.fillStyle=TH.muted;g.strokeStyle=TH.line;g.lineWidth=1;
+  if(!o.noY){const span=o.y1-o.y0,raw=span/3,p=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(m=>m*p).find(v=>v>=raw);g.textAlign='right';g.textBaseline='middle';
+    for(let y=Math.ceil(o.y0/st-1e-9)*st;y<=o.y1+1e-9;y+=st){g.beginPath();g.moveTo(ml,Y(y));g.lineTo(ml+w,Y(y));g.stroke();g.fillText(o.yf?o.yf(y):y,ml-6,Y(y))}}
+  if(o.xt){g.textBaseline='top';for(const[x,l]of o.xt){const px=X(x);g.textAlign=px>ml+w-24?'right':px<ml+14&&String(l).length>3?'left':'center';g.fillText(l,Math.min(px,ml+w+mr-1),mt+h+6)}}
+  o.draw(g,X,Y,{ml,mt,w,h})}
+const line=(g,X,Y,xs,ys,col,lw,dash)=>{g.beginPath();for(let i=0;i<ys.length;i++){const x=X(xs?xs[i]:i),y=Y(ys[i]);i?g.lineTo(x,y):g.moveTo(x,y)}g.setLineDash(dash||[]);g.strokeStyle=col;g.lineWidth=lw;g.lineJoin='round';g.stroke();g.setLineDash([])};
+const dot=(g,x,y,r,fill,stroke)=>{g.beginPath();g.arc(x,y,r,0,6.2832);if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}};
+const yearTicks=(m0,m1)=>{const t=[];for(let m=m0;m<=m1;m++)if(m%12===0&&(m1-m0<60||m%24===0))t.push([m,String(2019+m/12)]);return t};
+const vline=(g,X,b,x)=>{g.strokeStyle=TH.ink;g.globalAlpha=.35;g.lineWidth=1;g.beginPath();g.moveTo(X(x),b.mt);g.lineTo(X(x),b.mt+b.h);g.stroke();g.globalAlpha=1};
+const sm=t=>' <small>'+t+'</small>';
+
+// ---------- stage panels ----------
+const P={
+state(){const f=S.type<0?M.p0[S.c]:M.pi[S.type*C+S.c],core=M.oval(f,true),full=M.oval(f,false);let d=0;for(let v=0;v<V;v++)d+=f[v]*M.dist[S.c][v];
+  big('state',core.n+sm('venues'),'hold half of '+(S.type<0?'this neighborhood\'s':'this visitor type\'s')+' visits, out of '+V.toLocaleString());
+  $('st-core').textContent=core.area.toFixed(1)+' km²';$('st-range').textContent=Math.round(full.area)+' km²';$('st-dist').textContent=(d*KM).toFixed(1)+' km';
+  chart($('st-chart'),{x0:0,x1:1,y0:0,y1:K,noY:true,ml:112,draw(g,X,Y,b){const w=M.wts[S.c],mx=Math.max(...w),rh=b.h/K;g.textBaseline='middle';
+    for(let k=0;k<K;k++){const y=b.mt+rh*(k+.5),on=S.type<0||S.type===k;g.textAlign='right';g.fillStyle=on?TH.ink:TH.muted;g.font='12.5px '+FONT;g.fillText(M.TYPES[k].name,b.ml-10,y);
+      g.fillStyle=TH.ink;g.globalAlpha=on?.85:.25;g.fillRect(b.ml,y-5,(b.w-40)*w[k]/mx,10);g.globalAlpha=1;g.textAlign='left';g.fillStyle=TH.muted;g.fillText(pct(w[k],0),b.ml+(b.w-40)*w[k]/mx+6,y)}}})},
+observe(){const o=obsData(),i=S.obT-1;$('ob-To').textContent=S.obT;$('ob-hid').textContent=pct(o.hid,0);$('ob-churn').textContent=pct(o.churn,0);
+  big('observe',pct(o.ei[i],0),'of visits misplaced by the inferred field, against '+pct(o.en[i],0)+' for raw shares');
+  chart($('ob-chart'),{x0:1,x1:24,y0:0,y1:Math.ceil(o.en[0]*10)/10,yf:v=>pct(v,0),xt:[[1,'1'],[6,'6'],[12,'12'],[18,'18'],[24,'24 months']],draw(g,X,Y,b){const xs=o.en.map((_,i)=>i+1);vline(g,X,b,S.obT);line(g,X,Y,xs,o.en,TH.ref,2);line(g,X,Y,xs,o.ei,TH.ink,2.2);dot(g,X(S.obT),Y(o.ei[i]),4,TH.ink)}})},
+dynamics(){const d=dynData(),t=S.dyM;$('dy-mo').textContent=t+1;
+  big('dynamics',pct(d.eF[t],0),'of visits misplaced by the filtered state in month '+(t+1)+'; one fit of all months '+pct(d.eS[t],0)+', raw records '+pct(d.eR[t],0));
+  $('dy-a').textContent=pct(d.truth[t][d.a])+', '+pct(d.filt[t][d.a]);$('dy-b').textContent=pct(d.truth[t][d.b])+', '+pct(d.filt[t][d.b]);
+  chart($('dy-chart'),{x0:0,x1:35,y0:0,y1:Math.ceil(Math.max(...d.eR)*10)/10,yf:v=>pct(v,0),xt:[[0,'1'],[11,'12'],[23,'24'],[35,'36 months']],draw(g,X,Y,b){
+    g.fillStyle=TH.ink;g.globalAlpha=.08;g.fillRect(X(15),b.mt,X(19)-X(15),b.h);g.globalAlpha=1;vline(g,X,b,t);line(g,X,Y,null,d.eR,TH.ref,1.4);line(g,X,Y,null,d.eS,TH.muted,2);line(g,X,Y,null,d.eF,TH.ink,2.4);dot(g,X(t),Y(d.eF[t]),4,TH.ink)}})},
+traits(){const d=trData(),x=d[S.c],k=S.trait,f2=v=>v.toFixed(2),p0=v=>pct(v,0),row=(o,fm)=>fm(o.m)+sm('± '+fm(o.s)),fk=k==='dep'?p0:f2;
+  const nm={dep:'charging dependence',rig:'routine rigidity',sens:'travel-cost sensitivity'}[k];
+  big('traits',fk(x[k].m)+sm('± '+fk(x[k].s)),'recovered '+nm+' of this neighborhood; the true value is '+fk(x[k].t));
+  $('tr-dep').innerHTML=row(x.dep,p0);$('tr-rig').innerHTML=row(x.rig,f2);$('tr-sens').innerHTML=row(x.sens,f2);
+  const all=d.flatMap(o=>[o[k].t,o[k].m-o[k].s,o[k].m+o[k].s]),lo=Math.min(...all),hi=Math.max(...all),pd=(hi-lo)*.06,fm=k==='dep'?p0:v=>v.toFixed(1);
+  chart($('tr-chart'),{x0:lo-pd,x1:hi+pd,y0:lo-pd,y1:hi+pd,yf:fm,xt:[[lo,fm(lo)],[(lo+hi)/2,fm((lo+hi)/2)],[hi,fm(hi)+' true']],draw(g,X,Y){line(g,X,Y,[lo,hi],[lo,hi],TH.ref,1.5,[4,4]);
+    d.forEach((o,c)=>{const t=o[k],sel=c===S.c;g.strokeStyle=sel?TH.ev:TH.ink;g.globalAlpha=sel?1:.45;g.lineWidth=sel?2:1;g.beginPath();g.moveTo(X(t.t),Y(t.m-t.s));g.lineTo(X(t.t),Y(t.m+t.s));g.stroke();g.globalAlpha=1;if(!sel)dot(g,X(t.t),Y(t.m),2.6,TH.ink)});
+    const t=d[S.c][k];dot(g,X(t.t),Y(t.m),5,TH.ev,TH.surface)}})},
+discovery(){const d=dcRun(),n=S.dcN,cv=dcCurves(),ti=M.LAWS.indexOf(S.dcTruth),cur=n?d[n-1]:{p:[1/3,1/3,1/3],lm:NaN,ls:NaN};
+  big('discovery',pct(cur.p[ti],0),'belief in the true law after '+n+' opening'+(n===1?'':'s'));
+  $('dc-ps').textContent=cur.p.map(p=>pct(p,0)).join(', ');
+  const lead=cur.p.indexOf(Math.max(...cur.p));$('dc-lam').innerHTML=!n||lead===0?'none':cur.lm.toFixed(2)+sm('± '+cur.ls.toFixed(2));
+  const f95=v=>v>30?'over 30':v;$('dc-95').textContent=f95(cv.model.to95)+', '+f95(cv.market.to95);
+  chart($('dc-chart'),{x0:0,x1:30,y0:0,y1:1,yf:v=>pct(v,0),xt:[[0,'0'],[10,'10'],[20,'20'],[30,'30 openings']],draw(g,X,Y,b){const xs=cv.model.md.map((_,i)=>i+1);vline(g,X,b,n);
+    line(g,X,Y,[0].concat(xs),[1/3].concat(cv.market.md),TH.ref,2);line(g,X,Y,[0].concat(xs),[1/3].concat(cv.model.md),TH.ink,2);
+    line(g,X,Y,[0].concat(xs.slice(0,n)),[1/3].concat(d.slice(0,n).map(s=>s.p[ti])),TH.ev,2.4);dot(g,X(n),Y(cur.p[ti]),4.5,TH.ev,TH.surface)}})},
+intervene(){const iv=ivState(),R=iv.R;$('iv-lamo').textContent=S.lam.toFixed(1);$('iv-lc').textContent=(S.lam*T[S.c].lift).toFixed(2);$('iv-qo').textContent=pct(S.q,0);
+  const evNow=R.acc+iv.a*(R.evs-R.acc),useNow=(1-S.q)*R.acc+S.q*evNow;
+  big('intervene',pct(R.acc)+sm('to')+' '+pct(evNow),'of EV households\' visits go to hosts, before and after the stations');
+  $('iv-au').textContent=pct(R.acc)+', '+pct(useNow);
+  let loss=0;const isH=new Set(S.st);for(let v=0;v<V;v++)if(!isH.has(v)&&R.base[v]>1e-6){const l=iv.mix[v]/R.base[v]-1;if(l<loss)loss=l}
+  $('iv-loss').textContent=S.st.length?(100*loss).toFixed(2)+'%':'none';const o0=M.oval(R.base,false),o1=M.oval(iv.mix,false);$('iv-oval').textContent=Math.round(Math.hypot(o1.mx-o0.mx,o1.my-o0.my)*KM*1000)+' m';
+  const xs=[],ys=[];for(let t=-3;t<=12;t+=.25){xs.push(t);ys.push(R.acc+(t<=0?0:1-Math.pow(1-M.KAPPA,t))*(R.evs-R.acc))}
+  chart($('iv-chart'),{x0:-3,x1:12,y0:0,y1:Math.max(.02,R.evs*1.25),yf:v=>pct(v,v<.1?1:0),xt:[[-3,'−3'],[0,'opens'],[3,'3'],[6,'6'],[9,'9'],[12,'12']],draw(g,X,Y,b){vline(g,X,b,0);line(g,X,Y,xs,ys,TH.ev,2.4);dot(g,X(S.relax),Y(evNow),4.5,TH.ev,TH.surface)}})},
+replay(){const h=M.HIST[S.g].S,a=replayAlt().S,m=S.rpM;$('rp-mo').textContent=monthName(m);
+  big('replay',pct(a.acc[m]),'of the target group\'s visits are at stations when re-sited, against '+pct(h.acc[m])+' as it happened');
+  $('rp-e').textContent=pct(h.evacc[m])+', '+pct(a.evacc[m]);
+  chart($('rp-chart'),{x0:0,x1:71,y0:0,y1:Math.max(a.acc[71],h.acc[71])*1.12,yf:v=>pct(v,0),xt:yearTicks(0,71),draw(g,X,Y,b){vline(g,X,b,m);line(g,X,Y,null,h.acc,TH.ref,2);line(g,X,Y,null,a.acc,TH.ev,2.4);dot(g,X(m),Y(a.acc[m]),4,TH.ev)}})},
+rollout(){$('ro-mo').textContent=monthName(S.roM);const k=rollKey(S.roRule),km=rollKey('market');
+  if(!memo.has(k)||!memo.has(km)){big('rollout','…','imagining');['ro-n','ro-ev'].forEach(i=>$(i).textContent='…');setTimeout(()=>{rollRuns(S.roRule);rollRuns('market');if(S.stage==='rollout')render()},20);return}
+  const runs=memo.get(k),mk=memo.get(km),i=S.roM-72,at=(rs,f)=>med(rs.map(r=>r.S[f][i]));
+  big('rollout',pct(at(runs,'use')),'of the target group\'s visits are at stations in '+monthName(S.roM)+'; '+pct(at(runs,'acc'))+' before any response');
+  $('ro-n').textContent=runs[0].S.n[i];$('ro-ev').textContent=pct(at(runs,'evuse'));
+  const n=72,lo=[],hi=[],md=[],mm=[];let ymax=0;for(let j=0;j<n;j++){const v=runs.map(r=>r.S.use[j]);lo.push(Math.min(...v));hi.push(Math.max(...v));md.push(med(v));mm.push(med(mk.map(r=>r.S.use[j])));ymax=Math.max(ymax,hi[j],mm[j])}
+  const xs=md.map((_,j)=>72+j);chart($('ro-chart'),{x0:72,x1:143,y0:Math.floor(md[0]*100*.8)/100,y1:ymax*1.06,yf:v=>pct(v,0),xt:yearTicks(72,143).concat([[143,'']]),draw(g,X,Y,b){vline(g,X,b,S.roM);
+    g.beginPath();xs.forEach((x,j)=>j?g.lineTo(X(x),Y(hi[j])):g.moveTo(X(x),Y(hi[j])));for(let j=n-1;j>=0;j--)g.lineTo(X(xs[j]),Y(lo[j]));g.closePath();g.fillStyle=TH.ev;g.globalAlpha=.22;g.fill();g.globalAlpha=1;
+    if(S.roRule!=='market')line(g,X,Y,xs,mm,TH.ref,2);line(g,X,Y,xs,md,TH.ev,2.4);dot(g,X(S.roM),Y(md[i]),4,TH.ev)}})},
+plan(){const fr=frontier(),p=fr.pts[Math.round(S.w*20)],gain=100*(p.y-fr.market.y);$('pl-wo').textContent=pct(S.w,0);$('pl-t').textContent=pct(p.y);
+  big('plan',(gain>=0?'+':'−')+Math.abs(gain).toFixed(1)+sm('points'),'of access for the target group, over the market\'s plan');
+  const cost=1-p.x/fr.market.x;$('pl-cost').textContent=cost>0?pct(cost):'none ('+pct(-cost)+' gained)';
+  const all=fr.pts.concat([fr.market,fr.res,fr.base]),x0=Math.min(...all.map(q=>q.x)),x1=Math.max(...all.map(q=>q.x)),y0=Math.min(...all.map(q=>q.y)),y1=Math.max(...all.map(q=>q.y)),px=(x1-x0)*.08,py=(y1-y0)*.1;
+  chart($('pl-chart'),{x0:x0-px,x1:x1+px,y0:y0-py,y1:y1+py,yf:v=>pct(v,0),xt:[[x0,pct(x0,0)],[(x0+x1)/2,pct((x0+x1)/2,0)],[x1,pct(x1,0)]],draw(g,X,Y){
+    line(g,X,Y,fr.pts.map(q=>q.x),fr.pts.map(q=>q.y),TH.ink,2.2);g.font='12px '+FONT;g.textBaseline='middle';
+    const lab=(q,t,col,dx,al)=>{dot(g,X(q.x),Y(q.y),4.5,col);g.fillStyle=TH.ink;g.textAlign=al||'left';g.fillText(t,X(q.x)+(dx||8),Y(q.y))};
+    for(const q of fr.mk)dot(g,X(q.x),Y(q.y),2,TH.ref);lab(fr.market,'Market',TH.ref,-8,'right');lab(fr.res,'By residence',TH.ink,8);lab(fr.base,'2024',TH.muted,8);
+    dot(g,X(p.x),Y(p.y),6.5,TH.surface,TH.ev)}})},
+verify(){const sc=cached('sc',()=>M.scores(9)),ds=cached('ds'+S.doseSeed,()=>M.dose(S.doseSeed,1));
+  big('verify',ds.lam.toFixed(2)+sm('± '+ds.se.toFixed(2)),'lift recovered from synthetic openings; the true value is 1.00');
+  const rows=[['Last month\'s records',sc.persist],['Logit model',sc.logit],['Latent field',sc.latent]],lo=Math.min(0,sc.persist),hi=sc.truth*1.05;
+  chart($('vf-bars'),{x0:lo,x1:hi,y0:0,y1:3,noY:true,ml:128,xt:[[0,'0'],[sc.truth,'+'+sc.truth.toFixed(2)+' nats']],draw(g,X,Y,b){const rh=b.h/3;g.textBaseline='middle';g.font='12.5px '+FONT;
+    rows.forEach((r,i)=>{const y=b.mt+rh*(i+.5);g.textAlign='right';g.fillStyle=TH.ink;g.fillText(r[0],b.ml-10,y);g.fillStyle=i===2?TH.ink:TH.ref;const a=X(0),e=X(r[1]);g.fillRect(Math.min(a,e),y-6,Math.abs(e-a),12)});
+    g.strokeStyle=TH.ink;g.lineWidth=1;g.beginPath();g.moveTo(X(0),b.mt);g.lineTo(X(0),b.mt+b.h);g.stroke();g.setLineDash([3,3]);g.beginPath();g.moveTo(X(sc.truth),b.mt);g.lineTo(X(sc.truth),b.mt+b.h);g.stroke();g.setLineDash([])}});
+  const xm=Math.max(...ds.pts.map(p=>p.x))*1.08,ys=ds.pts.flatMap(p=>[p.y,p.fit,p.tru]),xs=ds.pts.map(p=>p.x);
+  chart($('vf-dose'),{x0:0,x1:xm,y0:Math.min(0,...ys)-.01,y1:Math.max(...ys)*1.12,yf:v=>(v>0?'+':'')+pct(v,0),xt:[[0,'0%'],[xm/2,pct(xm/2,0)],[xm,pct(xm,0)+' EV share']],draw(g,X,Y){
+    line(g,X,Y,xs,ds.pts.map(p=>p.tru),TH.ref,2,[4,4]);line(g,X,Y,xs,ds.pts.map(p=>p.fit),TH.ev,2.4);for(const p of ds.pts)dot(g,X(p.x),Y(p.y),3.5,TH.ink)}})}};
+
+// ---------- controls ----------
+const segs=[];
+function segment(sel){const box=document.createElement('span');box.className='seg';box.setAttribute('role','group');
+  for(const o of sel.options){const b=document.createElement('button');b.type='button';b.textContent=o.textContent;b.dataset.v=o.value;
+    b.addEventListener('click',e=>{e.preventDefault();sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))});box.appendChild(b)}
+  sel.hidden=true;sel.after(box);segs.push([sel,box])}
+function syncSegs(){for(const[sel,box]of segs)for(const b of box.children)b.setAttribute('aria-pressed',String(b.dataset.v===sel.value))}
+let raf=0;function render(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{syncSegs();note();P[S.stage]();drawMap()})}
+
+function setStage(s){S.stage=s;stopPlay();document.querySelectorAll('nav.acts button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.stage===s)));
+  document.querySelectorAll('.panel section').forEach(p=>p.hidden=p.id!=='p-'+s);const pn=document.querySelector('.panel');pn.scrollTop=0;render();if(s==='intervene'&&!reduce)playOpening()}
+document.querySelectorAll('nav.acts button').forEach(b=>b.addEventListener('click',()=>setStage(b.dataset.stage)));
+M.TYPES.forEach((t,k)=>{const o=document.createElement('option');o.value=k;o.textContent='Visitor type: '+t.name;$('st-type').appendChild(o)});
+document.querySelectorAll('.g-sel').forEach(sel=>{M.GROUPS.forEach((g,i)=>{const o=document.createElement('option');o.value=i;o.textContent=g.short[0].toUpperCase()+g.short.slice(1);sel.appendChild(o)});
+  sel.addEventListener('change',()=>{S.g=+sel.value;document.querySelectorAll('.g-sel').forEach(x=>x.value=S.g);render()})});
+document.querySelectorAll('.panel select').forEach(sel=>{if(sel.options.length<=3)segment(sel)});
+const bind=(id,ev,fn)=>$(id).addEventListener(ev,e=>{fn(e.target);render()});
+bind('st-type','change',e=>S.type=+e.value);bind('st-all','change',e=>S.all=e.checked);
+bind('ob-view','change',e=>S.obView=e.value);bind('ob-T','input',e=>S.obT=+e.value);bind('ob-draw','click',()=>S.obSeed++);
+bind('dy-view','change',e=>S.dyView=e.value);bind('dy-m','input',e=>{stopPlay();S.dyM=+e.value});bind('dy-draw','click',()=>S.dySeed++);
+$('dy-play').addEventListener('click',()=>tween(7000,u=>{S.dyM=Math.round(35*u);$('dy-m').value=S.dyM;note();P.dynamics();drawMap()}));
+bind('tr-sel','change',e=>S.trait=e.value);
+bind('dc-truth','change',e=>{stopPlay();S.dcTruth=e.value;S.dcN=0});bind('dc-strat','change',e=>{stopPlay();S.dcStrat=e.value;S.dcN=0});
+bind('dc-next','click',()=>{stopPlay();S.dcN=Math.min(30,S.dcN+1)});bind('dc-new','click',()=>{stopPlay();S.dcSeed++;S.dcN=0});
+$('dc-run').addEventListener('click',()=>{const n0=S.dcN>=30?0:S.dcN;tween(4500,u=>{S.dcN=Math.round(n0+(30-n0)*u);P.discovery();drawMap()})});
+bind('iv-lam','input',e=>S.lam=+e.value);bind('iv-q','input',e=>S.q=e.value/100);bind('iv-view','change',e=>S.ivView=e.value);
+bind('iv-clear','click',()=>{S.st=[]});$('iv-play').addEventListener('click',playOpening);
+bind('rp-rule','change',e=>S.rpRule=e.value);bind('rp-m','input',e=>{stopPlay();S.rpM=+e.value});
+bind('ro-rule','change',e=>S.roRule=e.value);bind('ro-pace','change',e=>{S.pace=+e.value;$('pl-pace').value=S.pace});bind('ro-path','change',e=>S.path=+e.value);bind('ro-shape','change',e=>S.shape=e.value);
+bind('ro-drift','change',e=>S.drift=e.checked);bind('ro-m','input',e=>{stopPlay();S.roM=+e.value});
+bind('pl-pace','change',e=>{S.pace=+e.value;$('ro-pace').value=S.pace});bind('pl-w','input',e=>S.w=e.value/20);bind('vf-draw','click',()=>S.doseSeed++);
+
+let playId=0;function stopPlay(){cancelAnimationFrame(playId);playId=0}
+function tween(ms,fn,done){stopPlay();if(reduce){fn(1);done&&done();return}const t0=performance.now();const step=t=>{const u=Math.min(1,(t-t0)/ms);fn(u);if(u<1)playId=requestAnimationFrame(step);else{playId=0;done&&done()}};playId=requestAnimationFrame(step)}
+function playOpening(){tween(3200,u=>{S.relax=-3+15*u;note();P.intervene();drawMap()})}
+$('rp-play').addEventListener('click',()=>tween(6000,u=>{S.rpM=Math.round(71*u);$('rp-m').value=S.rpM;P.replay();drawMap()}));
+$('ro-play').addEventListener('click',()=>{rollRuns(S.roRule);rollRuns('market');tween(6000,u=>{S.roM=72+Math.round(71*u);$('ro-m').value=S.roM;P.rollout();drawMap()})});
+
+map.addEventListener('click',e=>{const r=map.getBoundingClientRect(),s=r.height/H,x=(e.clientX-r.left)/s,y=(e.clientY-r.top)/s;
+  let bc=-1,bd=1e9;for(let c=0;c<C;c++){const d=Math.hypot(T[c].x-x,T[c].y-y);if(d<bd){bd=d;bc=c}}
+  const single=['state','observe','dynamics','traits','intervene'].includes(S.stage);
+  if(single&&bd<(S.stage==='intervene'?1.3:4)&&bc!==S.c){S.c=bc;defaultStations();S.relax=12;render();return}
+  if(S.stage==='intervene'){let bv=-1,dv=1e9;for(let v=0;v<V;v++){const d=Math.hypot(M.vx[v]-x,M.vy[v]-y);if(d<dv){dv=d;bv=v}}
+    if(dv<3){const i=S.st.indexOf(bv);if(i>=0){S.st.splice(i,1);S.relax=12;render()}else{S.st.push(bv);playOpening()}}}});
+
+// ---------- boot ----------
+function refresh(){readTheme();sizeMap();render()}
+new ResizeObserver(refresh).observe(stage);
+new MutationObserver(refresh).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(render);
+refresh();
+})();
+</script>
+</body>
+</html>
