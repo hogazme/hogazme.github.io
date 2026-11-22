@@ -45,6 +45,10 @@ nav.acts{display:flex;gap:6px 34px;flex-wrap:wrap;margin-top:22px}
 
 .stage{position:relative;margin-top:14px;border-radius:5px;overflow:hidden;background:var(--r0)}
 #map{display:block;width:100%;aspect-ratio:100/62;cursor:crosshair;touch-action:manipulation}
+.hint{position:absolute;right:12px;bottom:12px;pointer-events:none;font-size:12.5px;font-weight:500;color:var(--ink);padding:4px 10px;border:1px solid var(--line);border-radius:3px;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.stage.float .hint{right:420px}
+.stage:not(.float) .hint{bottom:auto;top:calc((100vw - 40px)*.62 - 40px)}
 .mapnote{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:110ch}
 .who{font-weight:600;color:var(--ink)}
 
@@ -137,6 +141,7 @@ table.status td:last-child{padding-right:0;white-space:nowrap;text-align:right}
 
   <div class="stage" id="stage">
     <canvas id="map" aria-label="Map of Seattle with synthetic data"></canvas>
+    <div class="hint" id="hint" hidden></div>
     <div class="panel">
 
       <section id="p-state">
@@ -775,7 +780,9 @@ function note(){const grp='Shading shows where '+M.GROUPS[S.g].short+' neighborh
   rollout:grp+'Small squares: stations open in 2024. Blue squares: stations added in this run.',
   plan:grp+'Small squares: stations open in 2024. Blue squares: the stations this plan adds by 2030.',
   verify:'Shading shows where EV households spend their visits. Squares are stations; each circle is a neighborhood, sized by its share of EV households.'};
-  $('mapnote').innerHTML=n[S.stage]+' Synthetic data on Seattle\'s real shoreline.'}
+  $('mapnote').innerHTML=n[S.stage]+' Synthetic data on Seattle\'s real shoreline.';
+  const hint={state:1,observe:1,dynamics:1,traits:1}[S.stage]?'Click a neighborhood dot to select it':S.stage==='intervene'?'Click a venue to open or close a station, or a dot to change neighborhood':'';
+  $('hint').textContent=hint;$('hint').hidden=!hint}
 
 // ---------- charts ----------
 function chart(cv,o){const r=cv.getBoundingClientRect();if(!r.width)return;const d=Math.min(2,window.devicePixelRatio||1);cv.width=r.width*d;cv.height=r.height*d;const g=cv.getContext('2d');g.setTransform(d,0,0,d,0,0);
