@@ -49,7 +49,26 @@ nav.acts{display:flex;gap:6px 34px;flex-wrap:wrap;margin-top:22px}
   background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .stage.float .hint{right:444px}
 .stage:not(.float) .hint{bottom:auto;top:calc((100vw - 40px)*.62 - 40px)}
-.mapnote{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:110ch}
+.legend{display:flex;flex-wrap:wrap;gap:5px 20px;margin-top:10px;font-size:12.5px;color:var(--ink)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{flex:none;display:inline-block;box-sizing:border-box}
+.sw.shade{width:36px;height:9px;background:linear-gradient(90deg,var(--r1),var(--r4),var(--r7),var(--r8))}
+.sw.sq{width:10px;height:10px;background:var(--ev)}
+.sw.sqo{width:10px;height:10px;border:1.5px solid var(--ink)}
+.sw.sqs{width:6px;height:6px;background:var(--ink)}
+.sw.dot{width:7px;height:7px;border-radius:50%;background:var(--surface);border:1px solid var(--ink)}
+.sw.circ{width:13px;height:13px;border-radius:50%;background:var(--surface);border:1px solid var(--ink)}
+.sw.circb{width:13px;height:13px;border-radius:50%;background:var(--ev);border:1.5px solid var(--ink)}
+.sw.pink{width:10px;height:10px;border-radius:50%;background:var(--target)}
+.sw.sel{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);background:radial-gradient(circle,var(--ink) 0 2.5px,transparent 3px)}
+.sw.ring{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--ink)}
+.sw.ringd{width:14px;height:14px;border-radius:50%;border:2px dashed var(--ink)}
+.sw.fdot{width:10px;height:10px;border-radius:50%;background:var(--ink)}
+.sw.ln{width:22px;border-top:2px solid var(--ink)}
+.sw.lnt{width:22px;border-top:1px solid var(--ink)}
+.sw.lnd{width:22px;border-top:2px dashed var(--ink)}
+.sw.lnb{width:22px;border-top:2px solid var(--ev)}
+.mapnote{margin:6px 0 0;color:var(--muted);font-size:13px;max-width:110ch}
 .who{font-weight:600;color:var(--ink)}
 
 .panel{padding:18px 4px 4px}
@@ -390,6 +409,7 @@ frontier = [outcome(plan(w)) for w in grid(0, 1)]</pre></details>
       </section>
     </div>
   </div>
+  <div class="legend" id="legend"></div>
   <p class="mapnote" id="mapnote"></p>
 
   <div class="below">
@@ -769,19 +789,22 @@ function drawMap(){if(!mw)return;const g=mctx,s=mh/H,F=mapField();
 
 function who(){const t=T[S.c],tags=[];if(M.GROUPS[0].mem[S.c])tags.push('low-income');if(M.GROUPS[1].mem[S.c])tags.push('renter-heavy');
   return`<span class="who">Neighborhood ${S.c+1}</span> (${t.hh.toLocaleString()} households${tags.length?', '+tags.join(', '):''}). `}
-function note(){const grp='Shading shows where '+M.GROUPS[S.g].short+' neighborhoods (pink) spend their visits. ';const n={
-  state:who()+'Brighter shading is lower energy: more of this neighborhood\'s visits. Lines run from home to its most-visited venues. Solid ellipse: habitual core. Dashed: full range.',
-  observe:who()+(S.obView==='records'?'Filled dots are venues with an exact count, sized by count. Rings are counts of 2 to 4, reported as 4. Everything else is withheld.':S.obView==='inferred'?'The field inferred from '+S.obT+' month'+(S.obT>1?'s':'')+' of censored records.':'The field the records were drawn from.'),
-  dynamics:who()+(S.dyView==='records'?'This month\'s censored records: filled dots are exact counts, rings are counts of 2 to 4.':'Blue ellipse: the habitual core as the filter sees it. Dashed ellipse: the true core. The two ringed venues are the anchor that fades and the one that takes over.'),
-  traits:who()+'Each circle is a neighborhood, sized by the recovered trait; the blue one is selected. Shading is the selected neighborhood\'s landscape.',
-  discovery:'Shading shows where EV households spend their visits. Blue squares: openings observed so far. Dashed ring: the site observed next.',
-  intervene:who()+'Squares are stations. Blue lines and the blue ellipse show the response; the dashed ellipse is the oval before any station.',
-  replay:grp+'Open squares: stations as the market sited them. Blue squares: the same openings re-sited.',
-  rollout:grp+'Small squares: stations open in 2024. Blue squares: stations added in this run.',
-  plan:grp+'Small squares: stations open in 2024. Blue squares: the stations this plan adds by 2030.',
-  verify:'Shading shows where EV households spend their visits. Squares are stations; each circle is a neighborhood, sized by its share of EV households.'};
-  $('mapnote').innerHTML=n[S.stage]+' Synthetic data on Seattle\'s real shoreline.';
-  const hint={state:1,observe:1,dynamics:1,traits:1}[S.stage]?'Click a neighborhood dot to select it':S.stage==='intervene'?'Click a venue to open or close a station, or a dot to change neighborhood':'';
+function note(){const st=S.stage,g=M.GROUPS[S.g].short,single={state:1,observe:1,dynamics:1,traits:1,intervene:1}[st];
+  const rec=[['fdot','Venue with an exact count, sized by count'],['ring','Count of 2 to 4, reported as 4 (anything lower is withheld)']],sel=['sel','Selected neighborhood'],home=['dot','Neighborhood'];
+  const L={
+    state:[['shade','Fewer to more of this neighborhood\'s visits'],['lnt','Its most-visited venues'],['ln','Habitual core'],['lnd','Full range'],sel,home],
+    observe:S.obView==='records'?rec.concat([sel,home]):[['shade','Fewer to more visits in the '+(S.obView==='truth'?'true':'inferred')+' field'],sel,home],
+    dynamics:S.dyView==='records'?rec.concat([sel,home]):[['shade','Fewer to more of this neighborhood\'s visits'],['lnb','Habitual core as the filter sees it'],['lnd','True core'],['ring','The anchor that fades and the one that takes over'],sel],
+    traits:[['circ','Neighborhood, sized by the recovered trait'],['circb','Selected neighborhood'],['shade','Fewer to more of its visits']],
+    intervene:[['sq','Station'],['lnb','Response: visits to hosts, and the oval after'],['lnd','Oval before any station'],['shade','Fewer to more visits by '+(S.ivView==='ev'?'EV households':'all households')],sel,home],
+    discovery:[['shade','Fewer to more visits by EV households'],['sq','Opening observed'],['ringd','Site observed next'],home],
+    replay:[['shade','Fewer to more visits by '+g+' neighborhoods'],['pink',g[0].toUpperCase()+g.slice(1)+' neighborhood'],['sqo','Station as the market sited it'],['sq','The same opening, re-sited'],home],
+    rollout:[['shade','Fewer to more visits by '+g+' neighborhoods'],['pink',g[0].toUpperCase()+g.slice(1)+' neighborhood'],['sqs','Station open in 2024'],['sq','Station added in this run'],home],
+    plan:[['shade','Fewer to more visits by '+g+' neighborhoods'],['pink',g[0].toUpperCase()+g.slice(1)+' neighborhood'],['sqs','Station open in 2024'],['sq','Station this plan adds by 2030'],home],
+    verify:[['shade','Fewer to more visits by EV households'],['sq','Station'],['circ','Neighborhood, sized by its share of EV households']]};
+  $('legend').innerHTML=L[st].map(([k,t])=>'<span><i class="sw '+k+'"></i>'+t+'</span>').join('');
+  $('mapnote').innerHTML=(single?who():'')+'Synthetic data on Seattle\'s real shoreline.';
+  const hint={state:1,observe:1,dynamics:1,traits:1}[st]?'Click a neighborhood dot to select it':st==='intervene'?'Click a venue to open or close a station, or a dot to change neighborhood':'';
   $('hint').textContent=hint;$('hint').hidden=!hint}
 
 // ---------- charts ----------
