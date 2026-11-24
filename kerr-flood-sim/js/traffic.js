@@ -23,6 +23,8 @@ const BASE_ROAD = [154, 152, 144, 110];
 // Speeds of the timeline: model seconds per second of viewing.
 const SPEEDS = [["15", "1×"], ["60", "4×"], ["240", "16×"]];
 const NO_POSITION_NOTE = "no road cell at its node; its node is a safe place, so its vehicles arrive at once";
+// the menu's internal name of the fallback origin's rule, in words
+const ruleText = (r) => (r === "A14 fallback" ? "no road cell at its node" : r);
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -101,7 +103,7 @@ function originItems(mode) {
         title: rules.join("; ") };
     });
   }
-  return m.menu.origins.map((o) => ({ id: o.id, node: o.node, text: `${o.id}: ${o.rule}${noPosition(o.node) ? " (no map position)" : ""}`,
+  return m.menu.origins.map((o) => ({ id: o.id, node: o.node, text: `${o.id}: ${ruleText(o.rule)}${noPosition(o.node) ? " (no map position)" : ""}`,
     title: `node ${o.node}` }));
 }
 // Origin rings: one per node with a map position, with the ids of the entries at that node (in list order).
@@ -541,7 +543,7 @@ const CHECK_NAMES = {
   ref_vs_jax: ["JAX CTM vs numpy reference", "vehicles"], conservation: ["Conservation residual", "vehicles"],
   neg_n: ["Negative cell state", "vehicles"], neg_q: ["Negative queue", "vehicles"], over_N: ["Above jam storage", "vehicles"],
   closed_change: ["Change in a closed cell", "vehicles"], accounted: ["Vehicles not accounted for", "share of V"],
-  b1_shares: ["Arrivals vs calculated shares (B1)", "share of V"], dots_cdf: ["Dots vs CTM arrival curve", "share"],
+  b1_shares: ["Arrivals vs calculated shares", "share of V"], dots_cdf: ["Dots vs CTM arrival curve", "share"],
   dots_status: ["Dot status mismatches", "dots"],
 };
 const fmtVal = (v) => (v === 0 ? "0" : Math.abs(v) >= 1e-3 ? v.toFixed(4) : v.toExponential(1));
@@ -555,19 +557,19 @@ function buildSide() {
   const left = sc.vehicles - e.arrived;
   const st = sc.stuck;
   const rows = [
-    ["Run", od ? `${sc.labels.join(" / ")} (single destination)` : `${e.menu_id}: ${menu ? menu.rule : ""}`],
+    ["Run", od ? `${sc.labels.join(" / ")} (single destination)` : `${e.menu_id}: ${menu ? ruleText(menu.rule) : ""}`],
     ["Origin", `node ${sc.origin}${noPos ? " (no map position)" : ""}${od ? ` → destination node ${sc.dest}` : ""}`],
     ["Vehicles", `${fmtVeh(sc.vehicles)} (${od ? "single-destination load" : `${sc.load} load`}), released evenly over the first ${m.depart_min} min`],
     ["Roads", wet ? `July 2025 road water, time-varying routing; departure ${dayTime(sc.t0_cdt)}, window ends ${dayTime(m.window_end_cdt.wet)}`
-      : `dry, fixed routing (labelled as departing ${dayTime(sc.t0_cdt)}; the clock is irrelevant)`],
+      : `dry, fixed routing (labelled as departing ${dayTime(sc.t0_cdt)}; departure time has no effect in dry runs)`],
     ["Run end", `+${(end / 60).toFixed(1)} min after departure (${sc.steps} steps of ${sc.dt} s)`],
     ["Arrived", `${fmtVeh(e.arrived)} of ${fmtVeh(sc.vehicles)} vehicles (${(100 * e.arrived / sc.vehicles).toFixed(2)}%)`],
   ];
   if (left > 1e-6 * sc.vehicles) rows.push(["Left at the end", `${fmtVeh(left)}: queued at the origin ${fmtVeh(st.queued)}, held at dead ends ${fmtVeh(st.held_dead_end)}, in closed cells ${fmtVeh(st.closed_cells)}, elsewhere on the road ${fmtVeh(st.other)}`]);
   const notes = [];
-  if (noPos) notes.push(`This origin has ${NO_POSITION_NOTE} (A14). It has no marker on the map.`);
+  if (noPos) notes.push(`This origin has ${NO_POSITION_NOTE}. It has no marker on the map.`);
   else if (sc.note) notes.push(`Note: ${sc.note}.`);
-  if (sc.note && noPos && !/A14/.test(sc.note)) notes.push(`Note: ${sc.note}.`);
+  if (sc.note && noPos && !/no road cell/.test(sc.note)) notes.push(`Note: ${sc.note}.`);
   $("trRun").innerHTML = `<dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`
     + notes.map((n) => `<p class="tr-note">${esc(n)}</p>`).join("");
   $("trCap1").textContent = wet ? "Vehicles over time (CTM)" : "Vehicles over time (CTM) against the free-flow reference";
@@ -582,7 +584,7 @@ function drawNodes() {
   const rows = Array.from(ids, (n) => ({ n, ctm: sc.arrived_node[n] || 0, calc: calc ? (calc[n] || 0) : null }))
     .sort((a, b) => (calc ? b.calc - a.calc : 0) || b.ctm - a.ctm);
   const top = rows.slice(0, 8), rest = rows.slice(8);
-  $("trCap2").textContent = calc ? "Arrivals per safe node at the end: CTM against calculated (B1)" : "Arrivals per safe node at the end (CTM)";
+  $("trCap2").textContent = calc ? "Arrivals per safe node at the end: CTM against calculated" : "Arrivals per safe node at the end (CTM)";
   const bar = (x, cls) => `<span class="tr-bar ${cls}" style="width:${(100 * Math.min(x / V, 1)).toFixed(2)}%"></span>`;
   let h = calc ? "" : `<p class="tr-note tr-wetnote">Time-varying routing: no calculated shares.</p>`;
   if (!rows.length) h += `<p class="tr-note">No vehicle arrived.</p>`;
@@ -604,7 +606,7 @@ function drawChecks() {
     return `<tr><td>${esc(name)}</td><td>${esc(fmtVal(c.value))}</td><td>${esc(rule)}${unit ? ` <span class="tr-unit">${esc(unit)}</span>` : ""}</td>`
       + `<td class="${c.pass ? "tr-pass" : "tr-fail"}">${c.pass ? "pass" : "FAIL"}</td></tr>`;
   });
-  // a run without the B1 check says why, in the table: wet runs (time-varying routing) and the A14 fallback origin
+  // a run without the B1 check says why, in the table: wet runs (time-varying routing) and the fallback origin
   // (no road cell at its node: nothing moves on roads, so no shares are compared)
   if (!ch.b1_shares) {
     const m = S.manifest, noPos = S.entry.no_position || noPosition(S.sc.origin);
@@ -613,7 +615,7 @@ function drawChecks() {
     rows.splice(at < 0 ? rows.length : at, 0, `<tr><td>${esc(CHECK_NAMES.b1_shares[0])}</td><td>–</td><td colspan="2" class="tr-unit">not checked: ${esc(why)}</td></tr>`);
   }
   $("trChecks").innerHTML = `<table><thead><tr><th>Check</th><th>Value</th><th>Rule</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table>`
-    + `<p class="tr-note">Dots check: largest distance between the dots' and the CTM's arrival curves, taken at every CTM step; rule 0.05 + 1/(2M), M = ${S.sc.dots.M} (post hoc, ctm-docs-rulings.md R13).</p>`;
+    + `<p class="tr-note">Dots check: largest distance between the dots' and the CTM's arrival curves, taken at every CTM step; rule 0.05 + 1/(2M), M = ${S.sc.dots.M} dots per run (M was fixed at 200 after a first export in which one run with 3 dots failed).</p>`;
 }
 
 // Chart 1: cumulative departed, queued, on the road, arrived per minute; dry runs also the free-flow reference
@@ -695,7 +697,7 @@ function buildLegend() {
        <div class="bar" style="background:linear-gradient(to right, ${stops.join(", ")})"></div><div class="ends"><span>few</span><span>${fmtVeh(S.d.maxN)}</span></div></div>`;
   const perMinute = S.d.T === 0 ? "" : `<p class="lg-note">Road colours change once per model minute (the minute frames; frame 0 is the empty start); the dots move continuously.</p>`;
   const expected = sc.expected
-    ? `<div class="lg-row">${ln(`background:${ORANGE};opacity:.45;height:9px`)}Expected route: each road's calculated share of the origin's traffic (B1), width ∝ √share</div>`
+    ? `<div class="lg-row">${ln(`background:${ORANGE};opacity:.45;height:9px`)}Expected route: each road's calculated share of the origin's traffic, width ∝ √share</div>`
     : `<div class="lg-row tr-wetnote">Time-varying routing: no calculated shares (no expected-route layer)</div>`;
   const cum = `<div class="lg-row">${ln(`background:repeating-linear-gradient(to right, var(--ink) 0 4px, transparent 4px 7px);height:3px`)}CTM cumulative flow over the run (share of the vehicles)${sc.expected ? "; drawn inside the expected band, they should coincide" : ""}</div>`;
   const shortest = od ? `<div class="lg-row">${ln(`background:repeating-linear-gradient(to right, var(--ink) 0 9px, transparent 9px 14px);height:2px`)}Shortest free-flow path</div>` : "";
@@ -749,7 +751,7 @@ function refreshInspector() {
       table: { head: ["Cell", "Closed", "Vehicles now", "v/vf", "Cum. flow", "Expected"], rows },
       note: "Vehicles now: the minute frame (uint16, rounded). v/vf = min(sf, sf·kc/s, wr·(1−s)/s) with s = vehicles / jam storage "
         + "and sf the water speed factor (1 on dry roads). Cum. flow: vehicles that entered the cell over the whole run / V. "
-        + (sc.expected ? "Expected: the cell's calculated share of the origin's traffic (B1)." : "Expected: none with time-varying routing.") });
+        + (sc.expected ? "Expected: the cell's calculated share of the origin's traffic." : "Expected: none with time-varying routing.") });
   } else {
     const dot = sc.dots.list[sel.i], st = TD.dotState(dot, S.t);
     const passed = st.kind === "road" ? dot.path.slice(0, st.i + 1) : st.kind === "arrived" ? dot.path : [];

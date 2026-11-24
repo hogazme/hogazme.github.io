@@ -25,13 +25,13 @@
   <div id="steps">
     <section class="step" id="title" data-step="title"><div class="card">
       <h1>July 4, 2025: when to warn</h1>
-      <p class="lede">How a flood-evacuation simulator plays out the Guadalupe River flood in Kerr County, Texas, and what better-timed warning orders change in it.</p>
-      <p class="caption" id="caption">Model output: expected values under assumed behavior and harm (D11). Not a reconstruction of July 4, 2025.</p>
+      <p class="lede">A simulation of evacuation during the Guadalupe River flood in Kerr County, Texas, and of how the timing of warning orders changes expected life loss.</p>
+      <p class="caption" id="caption">Model output: expected values under assumed behavior and harm models. Not a reconstruction of July 4, 2025.</p>
       <p class="hint">Scroll to begin.</p>
     </div></section>
     <section class="step" data-step="question"><div class="card">
       <h2>The question</h2>
-      <p>When should people along the river be told to leave, or to move to higher ground? An order that comes too early costs people time and trust; one that comes too late costs lives.</p>
+      <p>When should people along the river be told to leave, or to move to higher ground? An early order burdens people who did not need to act; a late order leaves less time to reach safety.</p>
       <p>The model follows <span data-num="people">–</span> people in the homes that its flood library reaches: <span data-num="library_floods">–</span> simulated floods, of which July 2025 is one. Each dot on the map is one building.</p>
     </div></section>
     <section class="step" data-step="water"><div class="card">
@@ -42,14 +42,14 @@
     <section class="step" data-step="roads"><div class="card">
       <h2>Roads close</h2>
       <p>In the model a road closes once the water on it reaches <span data-num="closure_m">–</span> m. The first road closes at <span data-num="first_closure">–</span>; at the peak, <span data-num="peak_closed_time">–</span>, <span data-num="peak_closed_pct">–</span> of the roads are closed. Water closes roads across the whole area, not only along the river: in the model, small creeks and low spots flood too, often with water too shallow to see at this zoom.</p>
-      <p>Traffic itself stays light: under any of the strategies below, at most <span data-num="max_vehicles">–</span> vehicles are on the road network at once.</p>
+      <p>Traffic stays light: under any of the strategies below, at most <span data-num="max_vehicles">–</span> vehicles are on the road network at once.</p>
     </div></section>
     <section class="step" data-step="roads-zoom"><div class="card">
       <p>Up close, near Ingram: closed roads in red, each marked 🚧.</p>
     </div></section>
     <section class="step" data-step="traffic"><div class="card">
       <h2>Traffic on every road</h2>
-      <p>The model also tracks traffic on each road segment. Each segment is coloured by its speed against free flow, as on a traffic map. This is a test of the traffic model, not a warning strategy: nobody decides, and no expected life loss is computed.</p>
+      <p>The model also tracks traffic on each road segment. Each segment is coloured by its speed relative to free flow. This is a test of the traffic model, not a warning strategy: departures are imposed rather than chosen, and no expected life loss is computed.</p>
       <ul class="legend" id="traffic-legend" aria-label="Road colours"></ul>
     </div></section>
     <section class="step" data-step="people"><div class="card">
@@ -63,9 +63,9 @@
       <p>With no warning, the expected life loss is <span data-num="loss_none">–</span>: <span data-num="loss_none_home">–</span> at home, <span data-num="loss_none_road">–</span> on the road and <span data-num="loss_none_foot">–</span> on foot. These are expected values under assumed harm, not counts of people.</p>
     </div></section>
     <section class="step" data-step="budget"><div class="card">
-      <h2>Four strategies, one budget</h2>
+      <h2>Four strategies under one budget</h2>
       <p>Every order has a cost. The model counts it as a burden: each person who acts on an order adds to it, in full if they choose to drive out and <span data-num="c_shelter">–</span> times as much if they choose higher ground instead (upstairs or on foot).</p>
-      <p>Each strategy below must keep its burden within the same budget: <span data-num="budget_pct">–</span> of the burden of ordering everyone out at the first chance, averaged over the floods used for training (the library without July 2025).</p>
+      <p>Each strategy below must keep its burden within the same budget: <span data-num="budget_pct">–</span> of the burden of ordering everyone out at the earliest possible time, averaged over the floods used for training (the library without July 2025).</p>
     </div></section>
     <section class="step strat" data-step="s-plan"><div class="card">
       <h3><i class="sw" data-color="plan"></i>Best fixed plan</h3>
@@ -73,20 +73,20 @@
     </div></section>
     <section class="step strat" data-step="s-gauge"><div class="card">
       <h3><i class="sw" data-color="gauge"></i>Gauge rule</h3>
-      <p>Order everyone to "<span data-num="gauge_instr">–</span>" once the river in the model has risen <span data-num="gauge_rise_m">–</span> m at one of the river gauges near Hunt, checked every hour. In this flood that happens at <span data-num="gauge_time">–</span>. This is the least harmful of the <span data-num="gauge_rules_n">–</span> gauge rules tried; <span data-num="gauge_all_worse">–</span>. In July 2025 it does slightly better than no warning (see the result). In this flood its expected life loss is <span data-num="loss_gauge">–</span>.</p>
+      <p>Order everyone to "<span data-num="gauge_instr">–</span>" once the river in the model has risen <span data-num="gauge_rise_m">–</span> m at one of the river gauges near Hunt, checked every hour. In this flood that happens at <span data-num="gauge_time">–</span>. This is the least harmful of the <span data-num="gauge_rules_n">–</span> gauge rules tried; <span data-num="gauge_all_worse">–</span>. In this flood its expected life loss is <span data-num="loss_gauge">–</span>.</p>
     </div></section>
     <section class="step strat" data-step="s-policy"><div class="card">
       <h3><i class="sw" data-color="policy"></i>Learned policy</h3>
-      <p>A rule learned on <span data-num="train_floods">–</span> other simulated floods: it times its orders separately for different parts of the valley, from the river forecast. July 2025 was never used in training. It does not order everyone: in this flood, <span data-num="policy_no_order_people">–</span> people in <span data-num="policy_no_order_homes">–</span> homes get no order. In this flood its expected life loss is <span data-num="loss_policy">–</span>.</p>
+      <p>A policy optimized on <span data-num="train_floods">–</span> other simulated floods: it times its orders separately for different parts of the valley, from the river forecast. July 2025 was never used in training. It does not order everyone: in this flood, <span data-num="policy_no_order_people">–</span> people in <span data-num="policy_no_order_homes">–</span> homes get no order. In this flood its expected life loss is <span data-num="loss_policy">–</span>.</p>
     </div></section>
     <section class="step strat" data-step="s-oracle"><div class="card">
       <h3><i class="sw" data-color="oracle"></i>Oracle</h3>
-      <p>The best schedule the search found knowing exactly how this flood unfolds. No real warning could do this. It gives a sense of how much room there is, but the search may not find the true best. In this flood its expected life loss is <span data-num="loss_oracle">–</span>.</p>
+      <p>The best schedule the search found knowing exactly how this flood unfolds. No real warning has this information. It estimates the most any warning could achieve in the model; because it comes from a search, the true optimum may have a lower expected life loss. In this flood its expected life loss is <span data-num="loss_oracle">–</span>.</p>
     </div></section>
     <section class="step" data-step="result"><div class="card">
       <h2>The result</h2>
       <p>Within the same budget, the learned policy brings the expected life loss to <b><span data-num="loss_policy">–</span></b>, against <span data-num="loss_plan">–</span> for the best fixed plan, <span data-num="loss_gauge">–</span> for the gauge rule and <span data-num="loss_none">–</span> with no warning.</p>
-      <p>That is <span data-num="oracle_share_pct">–</span> of the reduction the oracle reaches (<span data-num="loss_oracle">–</span>); because the oracle is a search result, this share may be overstated. Across all <span data-num="folds_total">–</span> floods, each held out in turn and averaged over shifted flood timings, <span data-num="folds_variant">–</span> does better than the best fixed plan in <span data-num="folds_wins">–</span> of the <span data-num="folds_total">–</span>.</p>
+      <p>That is <span data-num="oracle_share_pct">–</span> of the reduction the oracle reaches (<span data-num="loss_oracle">–</span>); because the oracle is a search result rather than a proven optimum, this share is an upper bound. Across all <span data-num="folds_total">–</span> floods, each held out in turn and averaged over shifted flood timings, <span data-num="folds_variant">–</span> does better than the best fixed plan in <span data-num="folds_wins">–</span> of the <span data-num="folds_total">–</span>.</p>
     </div></section>
     <section class="step" data-step="not"><div class="card">
       <h2>Next steps</h2>

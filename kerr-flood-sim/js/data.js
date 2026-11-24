@@ -68,7 +68,7 @@ export function speedRatio(s, sf, kc, wr) {
   if (!(s > 0)) return sf;
   return Math.max(Math.min(sf, sf * kc / s, wr * (1 - s) / s), 0);
 }
-// Google-style classes: 0 >= 0.75, 1 0.50-0.75, 2 0.25-0.50, 3 < 0.25 of free-flow speed, applied to the ratio
+// Speed classes: 0 >= 0.75, 1 0.50-0.75, 2 0.25-0.50, 3 < 0.25 of free-flow speed, applied to the ratio
 // rounded to 2 decimals (the value the inspector shows), so a shown value and its class always agree.
 export const SPEED_BREAKS = [0.75, 0.5, 0.25];
 export const round2 = (x) => Math.round(x * 100) / 100;

@@ -240,7 +240,7 @@ export function drawDeaths(svg, loaded, f, manifest, frames, opts = {}) {
 export function drawGauge(svg, gauge, ms, frames) {
   // Key above the plot (wraps when narrow), so neither the data nor the cursor runs under it.
   const since = (t) => fmtCdt(cdtMs(t)).replace(/ CDT$/, "");     // each series states its own reference time
-  const W = svg.clientWidth || 340, names = [`Model (Hunt cell): rise since ${since(gauge.model.t[0])}`,
+  const W = svg.clientWidth || 340, names = [`Model (channel cell at Hunt): rise since ${since(gauge.model.t[0])}`,
                                              `USGS 08165500: rise since ${since(gauge.usgs.t[0])}`];
   const items = []; let kx = 4, ky = 14;
   for (const nm of names) {

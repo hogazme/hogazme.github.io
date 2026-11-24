@@ -10,11 +10,11 @@ const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
 const MAPBOX_STYLES = { outdoors: "mapbox://styles/mapbox/outdoors-v12", satellite: "mapbox://styles/mapbox/satellite-streets-v12" };
 
 export const TRAFFIC = ["#ece7f6", "#c3b2e4", "#9a7fd0", "#6f4eb0", "#45297f"];       // occupancy ramp (layer option)
-// Speed vs free flow (Google-style), by speedClass: >= 0.75, 0.50-0.75, 0.25-0.50, < 0.25.
+// Speed vs free flow, by speedClass: >= 0.75, 0.50-0.75, 0.25-0.50, < 0.25.
 export const SPEED = ["#1e9e5a", "#f2a33a", "#d7301f", "#7f0000"];
 export const SPEED_LABELS = ["75% of free flow or faster", "50-75%", "25-50%", "under 25%"];
 export const TRAFFIC_W = 3;
-// Closed by water: solid Google-Maps-like red at 1.5 times the traffic width, with a road-closure marker (U+1F6A7) at
+// Closed by water: solid red at 1.5 times the traffic width, with a road-closure marker (U+1F6A7) at
 // the middle of each closed road from zoom 13 (user choice 2026-10-18). Its hue is close to the 25-50% traffic class.
 export const CLOSED = "#e53935";
 export const CLOSED_W = 1.5 * TRAFFIC_W;

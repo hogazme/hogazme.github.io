@@ -151,7 +151,7 @@ function stressNote(m) {
     const pk = m.checks && m.checks[k] && m.checks[k].peak_vs_ctm_report;
     const n = pk ? pk.export.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })
       : Math.round(x.max_vehicles).toLocaleString("en-US");
-    return `; the verification run ${esc(m.scenarios[k].label)} peaks at ${n} vehicles${pk ? " (as in the CTM verification report)" : ""}`;
+    return `; the verification run ${esc(m.scenarios[k].label)} peaks at ${n} vehicles`;
   }).join("");
 }
 
@@ -164,11 +164,11 @@ function buildLegend() {
   const isOpen = open ? open.open : !phone.matches;
   const mv = Object.entries(m.traffic.max_vehicles).filter(([k]) => m.scenarios[k] && !m.scenarios[k].verification)
     .reduce((a, [k, v]) => (!a || v.max_vehicles > a.v.max_vehicles ? { k, v } : a), null);
-  const light = mv ? `<p class="lg-note">Roads with under ${MIN_VEHICLES} expected vehicle are drawn as no or negligible traffic; full closure by water shows as closed roads; partial slowing appears only in the water layer. Traffic stayed light: at most ${Math.round(mv.v.max_vehicles)} vehicles were on the road network at once (${esc(m.scenarios[mv.k].label)}, ${esc(fmtCdt(cdtMs(mv.v.at_cdt)))}), against a jam storage of ${Math.round(m.traffic.jam_storage_veh).toLocaleString("en-US")} vehicles${stressNote(m)}.</p>` : "";
+  const light = mv ? `<p class="lg-note">Roads with under ${MIN_VEHICLES} expected vehicle are drawn as no or negligible traffic; full closure by water shows as closed roads; partial slowing appears only in the water layer. Traffic is light: at most ${Math.round(mv.v.max_vehicles)} vehicles are on the road network at once (${esc(m.scenarios[mv.k].label)}, ${esc(fmtCdt(cdtMs(mv.v.at_cdt)))}), against a jam storage of ${Math.round(m.traffic.jam_storage_veh).toLocaleString("en-US")} vehicles${stressNote(m)}.</p>` : "";
   const road = S.show.occupancy
     ? `<div class="lg-row"><b>Road occupancy</b> (vehicles / jam storage)
       <div class="bar" style="background:${grad(TRAFFIC)}"></div><div class="ends"><span>low</span><span>jammed</span></div></div>`
-    : `<div class="lg-row"><b>Traffic speed vs free flow (Google-style)</b>
+    : `<div class="lg-row"><b>Traffic speed relative to free flow</b>
       <ul class="speeds">${SPEED.map((c, i) => `<li><i class="ln" style="background:${c}"></i>${SPEED_LABELS[i]}</li>`).join("")}</ul></div>`;
   const forced = [S.key, S.compare].filter((k, i, a) => trafficOnly(k) && a.indexOf(k) === i).map((k) =>
     `<p class="lg-note"><b>${esc(m.scenarios[k].label)}</b>: forced demand, no behavior or harm model. Homes are at home until their vehicles enter the queue (${esc(forcedWindow(k))}), then left by car; life loss is not modelled.</p>`).join("");
@@ -470,7 +470,7 @@ function showTitleCard() {
 function startRecording() {
   if (!S.key) { $("titlescenario").textContent = "No scenario data could be loaded."; return; }
   const sc = S.manifest.scenarios[S.key];
-  $("titlescenario").innerHTML = `How the evacuation model sees it: <b style="color:${esc(sc.color)}">${esc(sc.label)}</b>`;
+  $("titlescenario").innerHTML = `Evacuation model output: <b style="color:${esc(sc.color)}">${esc(sc.label)}</b>`;
   setTimeout(() => { const c = $("titlecard"); if (c) c.remove(); S.tl.play(); }, 3000);
 }
 
